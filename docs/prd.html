@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 PRD</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#f3f5f8; --card:#fff; --ink:#1a1a1a; --muted:#667085; --line:#e8e8e8; --accent:#1677ff; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"PingFang SC","Hiragino Sans GB","Segoe UI","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.62; font-size:15px; }
+    header { position:sticky; top:0; z-index:20; background:rgba(255,255,255,.96); border-bottom:1px solid var(--line); padding:14px 20px; }
+    header h1 { margin:0 0 4px; font-size:20px; }
+    header .sub { margin:0; font-size:13px; color:var(--muted); }
+    main { max-width:920px; margin:0 auto; padding:20px 16px 80px; }
+    .doc { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:28px 24px 48px; }
+    h2 { font-size:20px; margin:36px 0 12px; padding-top:12px; border-top:1px solid var(--line); }
+    h3 { font-size:16px; margin:22px 0 8px; }
+    table { width:100%; border-collapse:collapse; margin:12px 0 18px; font-size:13px; }
+    th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+    th { background:#f4f6fb; }
+    code { background:#f6f7f9; padding:1px 5px; border-radius:4px; font-size:13px; }
+    .mermaid { background:#fff; margin:16px 0; }
+    a { color:var(--accent); }
+    blockquote { margin:12px 0; padding:10px 14px; background:#f4f6fb; border-left:4px solid #1677ff; color:#334; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>管理后台 PRD</h1>
+    <p class="sub">宣讲摘要。全文（含 2.22 字段表）：<a href="./prd-full.html">打开全文预览</a> · 原型：<a href="../admin/index.html#/dashboard">进入后台</a></p>
+  </header>
+  <main><div class="doc">
+    <blockquote>完整条款以 <code>docs/管理后台-开发测试宣讲需求.md</code> 为准。截图到达后按线上 1:1 校正子菜单与字段；资金与权限 Locked 不删。</blockquote>
+    <table>
+      <tr><th>项目名称</th><td>管理后台</td></tr>
+      <tr><th>端 / 语言</th><td>PC 后台 · 中文</td></tr>
+      <tr><th>演示账号</th><td>原型无需登录，打开即后台。正式环境仍要账号密码。</td></tr>
+      <tr><th>数据</th><td>localStorage <code>juan365_admin_v3</code> · 不产生真实资金</td></tr>
+    </table>
+
+    <h2>一、需求背景与目标</h2>
+    <p>Juan365 前台需求已分散在多个原型仓库，运营日常用的是同一套后台。要把登录、会员、充提、资金、游戏、优惠做成可点原型，让开发测试按同一路径验收。</p>
+    <h3>路径</h3>
+    <p>一级菜单（截图锁定原文）：会员管理、更多记录、充值提款、资金操作、平台游戏、优惠活动、报表管理。点 Logo JUAN 进仪表盘。会员管理 11 项：会员中心、会员分组、会员账单、KYC审核管理、自我限制、短信查询、登录日志、用户行为日志、提款账户管理、会员ID查询、用户分层。</p>
+    <p>UAT getInfo（2026-08-16）校正：截图「更多记录」= 线上「投注记录」。超管另可见任务系统、联盟管理、综合报告、渠道管理、信息配置、平台配置、负责任博彩、投注站、风控、盈亏异常、地推、系统设置。各页列名见 Markdown <strong>2.21</strong>（UAT 源码）。搜索五项 / 列表三项的完整逻辑见 <strong>2.22</strong>。</p>
+    <h3>权限</h3>
+    <p>原型无需登录，打开即超管后台。下表为正式环境角色规格。</p>
+    <table>
+      <tr><th>角色</th><th>可进</th></tr>
+      <tr><td>超管 admin</td><td>全部（本原型演示账号）</td></tr>
+      <tr><td>客服 kefu</td><td>仪表盘、会员、记录；详情划转禁用</td></tr>
+      <tr><td>财务 caiwu</td><td>仪表盘、会员详情资金、充提、资金操作</td></tr>
+      <tr><td>运营 yunying</td><td>仪表盘、游戏、优惠</td></tr>
+    </table>
+    <h3>业务要求（Locked）</h3>
+    <ul>
+      <li>禁止跨币种汇总；一键回收只收当前币种子平台。</li>
+      <li>充值通过才加款；提款通过先扣可用、加冻结；流水不达标不得通过。</li>
+      <li>人工调账原因必填。抽奖深配置以抽奖项目为准。QRPH 审核通过不在本原型自动发返利。</li>
+    </ul>
+
+    <h2>二、详细功能说明</h2>
+    <p>每条功能的 7 点（名称/说明/展示/交互/规则/状态/延伸）写在 Markdown 第二节。宣讲按模块：</p>
+    <ol>
+      <li>登录与侧栏七模块 + 多页签</li>
+      <li>会员列表 / 详情（wjfytn329022、24 平台、转入转出回收）</li>
+      <li>充值审核、提款审核、通道开关</li>
+      <li>人工存提、资金流水、余额回收记录（失败可再回收）</li>
+      <li>游戏上架、厂商维护</li>
+      <li>活动管理 11 种类型、兑换码、QRPH 配置、抽奖报表</li>
+      <li>用户分层活动配置（Axure）：分层下拉、策略定义、可触发场馆、三策略卡、预警 URL、取消/确定</li>
+      <li>2.22 全站搜索项（五列）与列表项（三列）字段逻辑</li>
+    </ol>
+
+    <h2>三、流程图 / 交互说明</h2>
+    <h3>登录</h3>
+    <p>原型打开即仪表盘。下图为正式环境登录流程。</p>
+    <div class="mermaid">
+flowchart TD
+  A[打开后台] --> B{有会话?}
+  B -->|否| C[登录]
+  C --> D{账号密码}
+  D -->|错| E[红字留页]
+  D -->|对| F[仪表盘]
+  B -->|是| F
+  F --> G{有权?}
+  G -->|否| H[无权限]
+  G -->|是| I[模块]
+    </div>
+    <h3>提款审核</h3>
+    <div class="mermaid">
+flowchart TD
+  A[待审核] --> B{流水达标?}
+  B -->|否| C[不能通过]
+  B -->|是| D{通过?}
+  D -->|拒绝| E[填原因 不扣款]
+  D -->|通过| F{余额够?}
+  F -->|否| G[单不动]
+  F -->|是| H[处理中 扣可用 加冻结]
+    </div>
+    <h3>用户分层活动配置</h3>
+    <p>按 <a href="https://85cnzd.axshare.com/?g=14&id=kow2b6&p=%E3%80%90%E8%8F%B2%E7%9B%98-backend%E3%80%91%E7%94%A8%E6%88%B7%E5%88%86%E5%B1%82%E6%B4%BB%E5%8A%A8%E9%85%8D%E7%BD%AE&sc=3">Axure 用户分层活动配置</a>：下拉选分层/场馆，每层 3 策略，取消恢复、确定校验。报表表底有「合计」行。细则见 Markdown 2.19.2 / 2.22。</p>
+    <div class="mermaid">
+flowchart TD
+  A[配置页] --> B[分层用户 / 策略定义 / 场馆 / 频率]
+  B --> C[策略1/2/3]
+  C --> D{确定?}
+  D -->|校验失败| E[保留填写]
+  D -->|通过| F[保存成功 演示]
+  C --> G{加号?}
+  G -->|当前层非法| E
+  G -->|合法| H[复制 用户置空]
+    </div>
+    <h3>一键回收</h3>
+    <div class="mermaid">
+flowchart TD
+  A[当前币种] --> B{子平台合计>0?}
+  B -->|否| C[无需回收]
+  B -->|是| D[确认]
+  D --> E[子平台清零 进主账户]
+  E --> F[回收记录 + 流水]
+    </div>
+
+    <h2>四、异常场景</h2>
+    <p>接口失败可重试；空数据「暂无数据」；原型无未登录跳转（正式环境仍跳登录）；无权限拦截；重复审核行操作变 —；余额不足/流水不达标不改单；会员不存在引导返回。完整表见 Markdown 第四节。</p>
+
+    <h2>五、验收标准</h2>
+    <ul>
+      <li>功能：打开即进后台（无需登录）；七菜单、会员详情 Locked 示例、充提与划转流水。正式角色权限见 Markdown。</li>
+      <li>页面 / 交互：中文、页签、确认取消不改数、资金 Toast 带「演示，不产生真实资金」。</li>
+      <li>数据：两位小数、不跨币种加总、重置恢复 seed。</li>
+      <li>异常 / 兼容 / 性能：按 Markdown 第五节勾选。</li>
+      <li>埋点：本项目不要求。</li>
+    </ul>
+
+    <h2>六、风险预估</h2>
+    <table>
+      <tr><th>风险</th><th>影响</th><th>处理后</th><th>降级</th></tr>
+      <tr><td>重复加款/出款</td><td>资金</td><td>冻会员对账回滚</td><td>关通道；本原型不自动发 QRPH 返利</td></tr>
+      <tr><td>提款冻结丢失</td><td>资金卡死或被提走</td><td>解冻退回或补扣</td><td>关提款改人工</td></tr>
+      <tr><td>回收部分失败却显示成功</td><td>账实不符</td><td>标失败再回收</td><td>只允许单平台转出</td></tr>
+      <tr><td>权限泄漏</td><td>内部误操作</td><td>收角色审计</td><td>只读 + 接口鉴权</td></tr>
+      <tr><td>无法登录</td><td>不能审核</td><td>备用登录停通道</td><td>停自动出款</td></tr>
+      <tr><td>原型当生产</td><td>错账错承诺</td><td>域名隔离</td><td>生产删演示栏</td></tr>
+      <tr><td>截图与原型不一致</td><td>返工</td><td>以最新截图校正展示</td><td>先上已锁定资金模块</td></tr>
+      <tr><td>抽奖两套真相</td><td>超发奖</td><td>深配置只认抽奖项目</td><td>本页不存奖品区间</td></tr>
+      <tr><td>分层活动重复发奖</td><td>超发/预警刷屏</td><td>关策略对账回滚</td><td>只开预警；原型不真实发奖</td></tr>
+    </table>
+  </div></main>
+  <script>mermaid.initialize({ startOnLoad: true, theme: "neutral" });</script>
+</body>
+</html>

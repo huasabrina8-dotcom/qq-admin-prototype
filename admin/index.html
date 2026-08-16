@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 — Juan365</title>
+  <link rel="stylesheet" href="css/admin.css?v=20260816p">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <div class="top-header" id="header"></div>
+      <div class="page" id="page"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <aside class="drawer" role="dialog">
+      <div class="drawer-head">
+        <span id="drawerTitle">编辑</span>
+        <button class="x" type="button" id="btnClose" aria-label="关闭">×</button>
+      </div>
+      <div class="drawer-body" id="drawerBody"></div>
+      <div class="drawer-foot">
+        <button class="btn btn-secondary" type="button" id="btnCancel">取消</button>
+        <button class="btn btn-primary" type="button" id="btnOk">确定</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="submodal" id="confirmModal">
+    <div class="subcard confirm-card">
+      <h3>提示</h3>
+      <p id="confirmText">确定？</p>
+      <div class="sub-actions">
+        <button class="btn btn-secondary" type="button" data-close="confirmModal">取消</button>
+        <button class="btn btn-primary" type="button" id="confirmOk">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="demo-bar" id="demoBar"></div>
+
+  <script src="js/store.js?v=20260816p"></script>
+  <script src="js/shell.js?v=20260816p"></script>
+  <script src="js/catalog.js?v=20260816p"></script>
+  <script src="js/pages.js?v=20260816p"></script>
+  <script src="js/app.js?v=20260816p"></script>
+</body>
+</html>

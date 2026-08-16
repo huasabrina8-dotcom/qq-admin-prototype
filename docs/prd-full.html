@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台需求文档 · 全文预览</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#f3f5f8; --card:#fff; --ink:#1a1a1a; --muted:#667085; --line:#e8e8e8; --accent:#165dff; --nav:280px; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; font-family:"PingFang SC","Hiragino Sans GB","Segoe UI","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.62; font-size:15px; }
+    header { position:sticky; top:0; z-index:30; background:rgba(255,255,255,.96); border-bottom:1px solid var(--line); padding:12px 20px; display:flex; gap:16px; align-items:center; justify-content:space-between; }
+    header h1 { margin:0; font-size:18px; font-weight:600; }
+    header .sub { margin:0; font-size:12px; color:var(--muted); }
+    header a { color:var(--accent); }
+    .wrap { display:flex; align-items:flex-start; }
+    nav { position:sticky; top:57px; width:var(--nav); height:calc(100vh - 57px); overflow:auto; background:#fff; border-right:1px solid var(--line); padding:12px 10px 40px; flex:0 0 var(--nav); }
+    nav input { width:100%; height:32px; border:1px solid #d0d3d9; border-radius:4px; padding:0 8px; margin-bottom:10px; }
+    nav a { display:block; color:#333; text-decoration:none; padding:4px 6px; border-radius:4px; font-size:12px; line-height:1.4; }
+    nav a:hover, nav a.on { background:#e8f3ff; color:var(--accent); }
+    nav a.h2 { font-weight:600; margin-top:8px; }
+    nav a.h3 { padding-left:12px; }
+    nav a.h4 { padding-left:22px; color:#555; }
+    nav a.h5 { padding-left:32px; color:#777; }
+    main { flex:1; min-width:0; padding:20px 20px 80px; }
+    .doc { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:28px 24px 64px; overflow-x:auto; }
+    .doc h1 { font-size:24px; margin:0 0 12px; }
+    .doc h2 { font-size:20px; margin:36px 0 12px; padding-top:12px; border-top:1px solid var(--line); }
+    .doc h3 { font-size:16px; margin:28px 0 8px; }
+    .doc h4 { font-size:15px; margin:20px 0 8px; }
+    .doc h5 { font-size:14px; margin:16px 0 6px; }
+    .doc table { width:100%; border-collapse:collapse; margin:12px 0 18px; font-size:13px; }
+    .doc th, .doc td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+    .doc th { background:#1a1a1a; color:#fff; font-weight:600; }
+    .doc tr:nth-child(even) td { background:#fafafa; }
+    .doc code { background:#f6f7f9; padding:1px 5px; border-radius:4px; font-size:13px; }
+    .doc pre { background:#f6f7f9; padding:12px; overflow:auto; border-radius:8px; }
+    .doc blockquote { margin:12px 0; padding:10px 14px; background:#f4f6fb; border-left:4px solid var(--accent); color:#334; }
+    .err { padding:24px; color:#c00; }
+    @media (max-width: 960px) {
+      nav { display:none; }
+      header { flex-wrap:wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>管理后台需求文档 · 全文</h1>
+      <p class="sub">含 2.21 原文 + 2.22 搜索/列表字段说明。原型：<a href="../admin/index.html#/dashboard">进入后台</a></p>
+    </div>
+    <p class="sub" id="meta">加载中…</p>
+  </header>
+  <div class="wrap">
+    <nav id="toc"><input id="q" type="search" placeholder="筛选目录…"></nav>
+    <main><div class="doc" id="doc"></div></main>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: "neutral" });
+    var SRC = "./管理后台-开发测试宣讲需求.md?v=" + Date.now();
+    fetch(SRC).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    }).then(function (md) {
+      document.getElementById("meta").textContent = "约 " + md.split(/\n/).length + " 行 · 打开即全文";
+      var html = marked.parse(md, { gfm: true, breaks: false });
+      var box = document.getElementById("doc");
+      box.innerHTML = html;
+      var i = 0;
+      var toc = document.getElementById("toc");
+      box.querySelectorAll("h1,h2,h3,h4,h5").forEach(function (h) {
+        if (!h.id) h.id = "h-" + (++i);
+        var a = document.createElement("a");
+        a.href = "#" + h.id;
+        a.textContent = h.textContent;
+        a.className = h.tagName.toLowerCase();
+        toc.appendChild(a);
+      });
+      box.querySelectorAll("pre code").forEach(function (code) {
+        if ((code.className || "").indexOf("language-mermaid") >= 0) {
+          var pre = code.parentNode;
+          var div = document.createElement("div");
+          div.className = "mermaid";
+          div.textContent = code.textContent;
+          pre.parentNode.replaceChild(div, pre);
+        }
+      });
+      mermaid.run({ querySelector: ".mermaid" });
+    }).catch(function (e) {
+      document.getElementById("doc").innerHTML = '<p class="err">文档加载失败：' + e.message + "</p>";
+    });
+    document.getElementById("q").addEventListener("input", function () {
+      var kw = this.value.trim();
+      document.querySelectorAll("#toc a").forEach(function (a) {
+        a.style.display = !kw || a.textContent.indexOf(kw) >= 0 ? "" : "none";
+      });
+    });
+  </script>
+</body>
+</html>
