@@ -1165,6 +1165,11 @@ body > .submodal {
   margin-bottom: 10px;
 }
 .act-lt-rank input[data-rank-desc] { width: 160px; }
+.act-rank-table { margin-bottom: 12px; }
+.act-rank-table th:last-child, .act-rank-table td:last-child { text-align: right; }
+.act-lt-rank-range { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.act-lt-rank-ops { white-space: nowrap; }
+.act-lt-rank-ops .btn { margin-left: 6px; }
 .act-empty {
   padding: 28px 0;
   text-align: center;

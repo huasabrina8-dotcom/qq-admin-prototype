@@ -459,6 +459,7 @@
       startAt: '',
       cycle_days: '',
       share_text: '分享至FB并@5个好友',
+      share_on: 1,
       share_sort: 1,
       promo: [{ en: 0, fil: 0 }],
       video_en: 0,

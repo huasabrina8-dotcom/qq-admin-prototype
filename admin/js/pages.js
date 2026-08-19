@@ -1416,17 +1416,24 @@
   }
 
   function lotteryRankHtml(ranks) {
-    return (ranks || []).map(function (r, i) {
-      return '<div class="act-lt-rank" data-rank-i="' + i + '">' +
-        '<span class="act-tt-lead">top</span>' +
-        actStepHtml({ key: 'rank_from_' + i, min: 1, max: 9999 }, r.from) +
+    var list = ranks && ranks.length ? ranks : [{ from: '', to: '', desc: '' }];
+    var body = list.map(function (r, i) {
+      var last = i === list.length - 1;
+      var ops = last
+        ? '<button type="button" class="btn btn-black" data-lt-rank-add>新增</button>' +
+          (list.length > 1 ? '<button type="button" class="btn btn-danger" data-lt-rank-del="' + i + '">删除</button>' : '')
+        : '';
+      return '<tr class="act-lt-rank-row" data-rank-i="' + i + '">' +
+        '<td><div class="act-lt-rank-range"><span class="act-tt-lead">top</span>' +
+        actStepHtml({ key: 'rank_from_' + i, min: 1, max: 9999, ph: '请输入' }, (r.from === 0 || r.from) ? r.from : '') +
         '<em>~</em>' +
-        actStepHtml({ key: 'rank_to_' + i, min: 1, max: 9999 }, r.to) +
-        '<input data-rank-desc="' + i + '" type="text" placeholder="排名说明" value="' + U.escapeHtml(r.desc || '') + '">' +
-        '<button type="button" class="btn btn-black" data-lt-rank-add>新增</button>' +
-        (i ? '<button type="button" class="op-link danger" data-lt-rank-del="' + i + '">删除</button>' : '') +
-        '</div>';
+        actStepHtml({ key: 'rank_to_' + i, min: 1, max: 9999, ph: '请输入' }, (r.to === 0 || r.to) ? r.to : '') +
+        '</div></td>' +
+        '<td><input data-rank-desc="' + i + '" type="text" placeholder="请输入" value="' + U.escapeHtml(r.desc || '') + '"></td>' +
+        '<td class="act-lt-rank-ops">' + ops + '</td></tr>';
     }).join('');
+    return '<table class="act-vip-table act-rank-table"><thead><tr><th>排名区间</th><th>排名说明</th><th>操作</th></tr></thead><tbody>' +
+      body + '</tbody></table>';
   }
 
   function lotteryVipHtml(rows) {
@@ -1465,6 +1472,9 @@
       actUnitHtml('cycle_days', cfg.cycle_days, '天', '请输入循环周期') +
       '</div></div>' +
       '<div class="act-lt-sec">分享任务配置 <span>分享至FB并@5个好友</span></div>' +
+      '<div class="form-item"><label>分享任务开关 ' + actQ('默认打开。打开则前台展示分享任务；关闭则前台不展示，本期无需完成分享即可参与抽奖') +
+      '</label><div class="ctrl"><button class="switch' + (cfg.share_on !== 0 && cfg.share_on !== false ? ' on' : '') +
+      '" type="button" data-cfg-sw="share_on"><i></i></button></div></div>' +
       '<div class="form-item"><label>任务排序</label><div class="ctrl">' +
       actStepHtml({ key: 'share_sort', min: 1, max: 99 }, cfg.share_sort || 1) + '</div></div>' +
       '<div class="act-lt-sec act-lt-sec-row">上传用户宣传图片 <button type="button" class="btn btn-black act-slot-add" id="aLtPromoAdd">+</button></div>' +
@@ -1651,13 +1661,12 @@
     bindUploads(box);
 
     function readRanks() {
-      return $$ (box, '.act-lt-rank').map(function (line, i) {
-        var fromEl = line.querySelector('[data-cfg="rank_from_' + i + '"]') || line.querySelector('[data-kind="step"]');
+      return $$ (box, '.act-lt-rank-row').map(function (line) {
         var inputs = line.querySelectorAll('[data-kind="step"]');
         var desc = line.querySelector('[data-rank-desc]');
         return {
-          from: inputs[0] ? Number(inputs[0].value) || 1 : 1,
-          to: inputs[1] ? Number(inputs[1].value) || 1 : 1,
+          from: inputs[0] ? Number(inputs[0].value || 0) : 0,
+          to: inputs[1] ? Number(inputs[1].value || 0) : 0,
           desc: desc ? desc.value.trim() : ''
         };
       });
@@ -1733,7 +1742,7 @@
       var addS = t.closest('[data-rain-add="lt"]');
       if (addS) {
         var slots = rainReadSlotsFromBox(box, 'lt');
-        slots.push({ start: '12:00:00', end: '12:05:00' });
+        slots.push({ start: '', end: '' });
         rainRenderSlots(box, 'lt', slots);
         return;
       }
@@ -1747,8 +1756,7 @@
       var addR = t.closest('[data-lt-rank-add]');
       if (addR) {
         var ranks = readRanks();
-        var last = ranks[ranks.length - 1];
-        ranks.push({ from: (last ? Number(last.to) + 1 : 1), to: (last ? Number(last.to) + 10 : 10), desc: '' });
+        ranks.push({ from: '', to: '', desc: '' });
         renderRanks(ranks);
         return;
       }
@@ -2084,6 +2092,8 @@
     cfg.cycle_days = txt('cycle_days');
     cfg.share_sort = txt('share_sort') || '1';
     cfg.share_text = '分享至FB并@5个好友';
+    var shareSw = document.querySelector('[data-cfg-sw="share_on"]');
+    cfg.share_on = shareSw && shareSw.classList.contains('on') ? 1 : 0;
     cfg.rain_wager = txt('rain_wager');
     cfg.rain_total_amt = Number(txt('rain_total_amt')) || 0;
     cfg.rain_count = Number(txt('rain_count')) || 0;
@@ -2110,12 +2120,12 @@
     cfg.games = $$ (document, '[data-lt-game]:checked').map(function (c) { return c.getAttribute('data-lt-game'); });
     cfg.tasks = (box && box._lt && box._lt.tasks) ? box._lt.tasks : [];
     cfg.prizes = (box && box._lt && box._lt.prizes) ? box._lt.prizes : [];
-    cfg.ranks = $$ (document, '.act-lt-rank').map(function (line) {
+    cfg.ranks = $$ (document, '.act-lt-rank-row').map(function (line) {
       var inputs = line.querySelectorAll('[data-kind="step"]');
       var desc = line.querySelector('[data-rank-desc]');
       return {
-        from: inputs[0] ? Number(inputs[0].value) || 1 : 1,
-        to: inputs[1] ? Number(inputs[1].value) || 1 : 1,
+        from: inputs[0] ? Number(inputs[0].value || 0) : 0,
+        to: inputs[1] ? Number(inputs[1].value || 0) : 0,
         desc: desc ? desc.value.trim() : ''
       };
     });
@@ -2225,6 +2235,9 @@
     if (type === 'lottery') {
       if (!cfg.startAt) return '请选择活动开始时间';
       if (cfg.cycle_days === '' || isNaN(Number(cfg.cycle_days)) || Number(cfg.cycle_days) < 1) return '循环周期至少 1 天';
+      var shareOn = cfg.share_on !== 0 && cfg.share_on !== false;
+      var taskOn = (cfg.tasks || []).some(function (t) { return t && t.enabled !== false; });
+      if (!shareOn && !taskOn) return '必须选中一个任务开启';
       if (cfg.rain_wager === '' || isNaN(Number(cfg.rain_wager))) return '请输入红包雨打码倍数';
       if (!cfg.ranks || !cfg.ranks.length) return '至少配置一条流水排名区间';
       for (var ri = 0; ri < cfg.ranks.length; ri++) {
