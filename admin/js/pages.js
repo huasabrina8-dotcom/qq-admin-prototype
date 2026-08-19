@@ -1402,13 +1402,49 @@
     }).join('');
   }
 
+  function ltIsShareTask(t) {
+    return !!(t && (t.kind === 'share' || String(t.cond || '').indexOf('分享') >= 0));
+  }
+
+  function ltAddTaskConds() {
+    return (S.ACT_LT_CONDS || []).filter(function (c) { return String(c).indexOf('分享') < 0; });
+  }
+
   function lotteryTaskRows(tasks) {
-    if (!tasks || !tasks.length) return ltEmptyRow(4);
-    return tasks.map(function (t, i) {
-      return '<tr><td>' + U.escapeHtml(String(t.sort || i + 1)) + '</td><td>' + U.escapeHtml(t.cond || '') +
-        '</td><td>' + U.escapeHtml(t.value || '—') +
-        '</td><td><button type="button" class="op-link danger" data-lt-del-task="' + i + '">删除</button></td></tr>';
+    var opts = (tasks || []).filter(function (t) { return !ltIsShareTask(t); });
+    if (!opts.length) return ltEmptyRow(4);
+    return opts.map(function (t, i) {
+      var cond = t.cond && String(t.cond).indexOf('分享') < 0 ? t.cond : (ltAddTaskConds()[0] || '');
+      var condOpts = ltAddTaskConds().map(function (c) {
+        return '<option' + (c === cond ? ' selected' : '') + '>' + U.escapeHtml(c) + '</option>';
+      }).join('');
+      return '<tr class="act-lt-task-line">' +
+        '<td><div class="stepper list-step act-lt-task-step">' +
+        '<button type="button" data-lt-task-step="-1">−</button>' +
+        '<input data-lt-task-sort type="number" min="1" value="' + U.escapeHtml(String(t.sort || i + 1)) + '">' +
+        '<button type="button" data-lt-task-step="1">+</button></div></td>' +
+        '<td><select class="act-lt-task-cond" data-lt-task-cond>' + condOpts + '</select></td>' +
+        '<td><input class="act-lt-task-val" data-lt-task-val type="text" placeholder="' +
+        U.escapeHtml('请输入' + cond) + '" value="' + U.escapeHtml(t.value || '') + '"></td>' +
+        '<td><button type="button" class="btn btn-danger" data-lt-del-task>删除任务</button></td></tr>';
     }).join('');
+  }
+
+  function readLtTasksFromBox(box) {
+    if (!box) return [];
+    return $$ (box, '#aLtTaskBody tr.act-lt-task-line').map(function (tr) {
+      var sortEl = tr.querySelector('[data-lt-task-sort]');
+      var condEl = tr.querySelector('[data-lt-task-cond]');
+      var valEl = tr.querySelector('[data-lt-task-val]');
+      var cond = condEl ? condEl.value : '';
+      if (!cond || String(cond).indexOf('分享') >= 0) return null;
+      return {
+        sort: Number(sortEl && sortEl.value || 1),
+        cond: cond,
+        value: valEl ? valEl.value.trim() : '',
+        enabled: true
+      };
+    }).filter(Boolean);
   }
 
   function lotteryPrizeRows(prizes) {
@@ -1457,9 +1493,6 @@
 
   function lotteryBodyHtml(cfg) {
     var start = ltToLocal(cfg.startAt);
-    var condOpts = (S.ACT_LT_CONDS || []).map(function (c) {
-      return '<option>' + U.escapeHtml(c) + '</option>';
-    }).join('');
     var typeOpts = '<option value="">请选择奖品类型</option>' + (S.ACT_LT_PRIZE_TYPES || []).map(function (t) {
       return '<option>' + t + '</option>';
     }).join('');
@@ -1494,12 +1527,13 @@
       '<button type="button" class="btn btn-black' + (cfg.video_fil ? ' done' : '') + '" data-lt-video="fil">点击上传</button>' +
       '<div class="extra">mp4.webm格式视频</div></div></div>' +
       '<div class="act-lt-sec">可选任务配置</div>' +
+      '<p class="act-tt-note">分享任务用上方开关控制，不出现在本表。点「新增任务」直接加一行。</p>' +
       '<div class="form-item"><label>活动允许游戏 ' + actQ('全不选则不限制游戏') + '</label><div class="ctrl">' +
       actGamePickBtn('aLtPickGames') +
       '<div class="act-game-hint" id="aLtGamesHint">' + (names.length ? names.join('、') : '未选择') + '</div>' +
       '<div class="act-game-panel" id="aLtGamePanel" hidden>' + gameBoxes + '</div></div></div>' +
       '<div class="act-lt-table-head"><button type="button" class="btn btn-black" id="aLtAddTask">新增任务</button></div>' +
-      '<table class="act-vip-table"><thead><tr><th>任务排序</th><th>任务条件</th><th>条件说明或数值</th><th>操作</th></tr></thead>' +
+      '<table class="act-vip-table act-lt-task-table"><thead><tr><th>任务排序</th><th>任务条件</th><th>条件说明或数值</th><th>操作</th></tr></thead>' +
       '<tbody id="aLtTaskBody">' + lotteryTaskRows(cfg.tasks) + '</tbody></table>' +
       '<div class="act-lt-sec">红包雨配置</div>' +
       '<div class="form-item"><label class="req">红包雨打码倍数</label><div class="ctrl">' +
@@ -1534,12 +1568,6 @@
       actPlainHtml('share_url', cfg.share_url, '请输入分享链接配置') + '</div></div>' +
       '<div class="form-item"><label class="req">官方账号</label><div class="ctrl">' +
       actPlainHtml('official', cfg.official, '请输入官方账号') + '</div></div>' +
-      '<div class="act-sub" id="aLtTaskSub" hidden><div class="act-sub-card"><h4>新增任务</h4>' +
-      '<div class="form-item"><label>任务排序</label><div class="ctrl"><input id="aLtTaskSort" type="text" value="1"></div></div>' +
-      '<div class="form-item"><label>任务条件</label><div class="ctrl"><select id="aLtTaskCond">' + condOpts + '</select></div></div>' +
-      '<div class="form-item"><label>条件说明或数值</label><div class="ctrl"><input id="aLtTaskVal" type="text" placeholder="例如 1000"></div></div>' +
-      '<div class="act-sub-ops"><button type="button" class="btn" id="aLtTaskCancel">取消</button>' +
-      '<button type="button" class="btn btn-black" id="aLtTaskOk">确认</button></div></div></div>' +
       '<div class="act-sub" id="aLtPrizeSub" hidden><div class="act-sub-card"><h4>新增奖品</h4>' +
       '<div class="form-item"><label class="req">奖品排序</label><div class="ctrl"><input id="aLtPrizeSort" type="text" value="1"></div></div>' +
       '<div class="form-item"><label class="req">所属排名</label><div class="ctrl"><select id="aLtPrizeRank"></select></div></div>' +
@@ -1644,11 +1672,7 @@
   function bindLotteryCfg(box) {
     if (!box || !box.querySelector('.act-lt-form')) return;
     var st = { tasks: [], prizes: [] };
-    $$ (box, '#aLtTaskBody tr').forEach(function (tr) {
-      if (tr.classList.contains('act-empty-row')) return;
-      var tds = tr.querySelectorAll('td');
-      st.tasks.push({ sort: tds[0].textContent, cond: tds[1].textContent, value: tds[2].textContent === '—' ? '' : tds[2].textContent });
-    });
+    st.tasks = readLtTasksFromBox(box);
     $$ (box, '#aLtPrizeBody tr').forEach(function (tr) {
       if (tr.classList.contains('act-empty-row')) return;
       var tds = tr.querySelectorAll('td');
@@ -1773,9 +1797,21 @@
         renderRanks(rs);
         return;
       }
+      var stepT = t.closest('[data-lt-task-step]');
+      if (stepT) {
+        var stepInput = stepT.parentElement.querySelector('input');
+        if (stepInput) {
+          var n = Number(stepInput.value || 1) + Number(stepT.getAttribute('data-lt-task-step'));
+          stepInput.value = Math.max(1, n);
+          st.tasks = readLtTasksFromBox(box);
+        }
+        return;
+      }
       var delT = t.closest('[data-lt-del-task]');
       if (delT) {
-        st.tasks.splice(Number(delT.getAttribute('data-lt-del-task')), 1);
+        var taskTr = delT.closest('tr');
+        if (taskTr) taskTr.parentNode.removeChild(taskTr);
+        st.tasks = readLtTasksFromBox(box);
         box.querySelector('#aLtTaskBody').innerHTML = lotteryTaskRows(st.tasks);
         return;
       }
@@ -1786,30 +1822,35 @@
       }
     };
 
-    var taskSub = box.querySelector('#aLtTaskSub');
     var prizeSub = box.querySelector('#aLtPrizeSub');
     var addTask = box.querySelector('#aLtAddTask');
     if (addTask) {
       addTask.onclick = function () {
-        box.querySelector('#aLtTaskSort').value = String(st.tasks.length + 1);
-        box.querySelector('#aLtTaskVal').value = '';
-        if (taskSub) taskSub.hidden = false;
+        st.tasks = readLtTasksFromBox(box);
+        var conds = ltAddTaskConds();
+        var cond = conds[0] || '当期充值金额';
+        var next = 1;
+        st.tasks.forEach(function (row) {
+          var n = Number(row.sort || 0);
+          if (n >= next) next = n + 1;
+        });
+        st.tasks.push({ sort: next, cond: cond, value: '', enabled: true });
+        box.querySelector('#aLtTaskBody').innerHTML = lotteryTaskRows(st.tasks);
       };
     }
-    var taskCancel = box.querySelector('#aLtTaskCancel');
-    if (taskCancel) taskCancel.onclick = function () { if (taskSub) taskSub.hidden = true; };
-    var taskOk = box.querySelector('#aLtTaskOk');
-    if (taskOk) {
-      taskOk.onclick = function () {
-        st.tasks.push({
-          sort: box.querySelector('#aLtTaskSort').value || String(st.tasks.length + 1),
-          cond: box.querySelector('#aLtTaskCond').value,
-          value: box.querySelector('#aLtTaskVal').value.trim()
-        });
-        st.tasks.sort(function (a, b) { return Number(a.sort) - Number(b.sort); });
-        box.querySelector('#aLtTaskBody').innerHTML = lotteryTaskRows(st.tasks);
-        if (taskSub) taskSub.hidden = true;
-      };
+    var taskBody = box.querySelector('#aLtTaskBody');
+    if (taskBody) {
+      taskBody.addEventListener('change', function (e) {
+        var sel = e.target.closest('[data-lt-task-cond]');
+        if (sel) {
+          var input = sel.closest('tr').querySelector('[data-lt-task-val]');
+          if (input) input.placeholder = '请输入' + sel.value;
+        }
+        st.tasks = readLtTasksFromBox(box);
+      });
+      taskBody.addEventListener('input', function () {
+        st.tasks = readLtTasksFromBox(box);
+      });
     }
     var addPrize = box.querySelector('#aLtAddPrize');
     if (addPrize) {
@@ -2124,7 +2165,7 @@
     cfg.video_en = ven && ven.classList.contains('done') ? 1 : 0;
     cfg.video_fil = vfil && vfil.classList.contains('done') ? 1 : 0;
     cfg.games = $$ (document, '[data-lt-game]:checked').map(function (c) { return c.getAttribute('data-lt-game'); });
-    cfg.tasks = (box && box._lt && box._lt.tasks) ? box._lt.tasks : [];
+    cfg.tasks = readLtTasksFromBox(box);
     cfg.prizes = (box && box._lt && box._lt.prizes) ? box._lt.prizes : [];
     cfg.ranks = $$ (document, '.act-lt-rank-row').map(function (line) {
       var inputs = line.querySelectorAll('[data-kind="step"]');

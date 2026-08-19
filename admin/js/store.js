@@ -303,7 +303,7 @@
     { id: 'Bingo', name: 'Bingo' },
     { id: 'Numeric', name: 'Numeric' }
   ];
-  var ACT_LT_CONDS = ['分享至FB并@好友', '累计充值', '累计有效流水', '充值次数', '登录天数', '完成指定游戏局数'];
+  var ACT_LT_CONDS = ['当期充值金额', '累计充值', '累计有效流水', '充值次数', '登录天数', '完成指定游戏局数'];
   var ACT_LT_PRIZE_TYPES = ['真金', '实物'];
   var ACT_TT_GAME_DETAIL = {
     Slot: ['Fortune Gems', 'Super Ace', 'Money Coming'],
