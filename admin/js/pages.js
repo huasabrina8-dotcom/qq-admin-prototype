@@ -1094,6 +1094,12 @@
       '<button type="button" data-cfg-step="' + field.key + '" data-d="1">+</button></div>';
   }
 
+  function actGamePickBtn(id) {
+    return '<button class="btn btn-black act-game-btn" type="button" id="' + id + '">' +
+      '<svg class="act-game-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="2.2" cy="3.5" r="1.15"/><rect x="5.2" y="2.6" width="9.3" height="1.8" rx="0.3"/><circle cx="2.2" cy="8" r="1.15"/><rect x="5.2" y="7.1" width="9.3" height="1.8" rx="0.3"/><circle cx="2.2" cy="12.5" r="1.15"/><rect x="5.2" y="11.6" width="9.3" height="1.8" rx="0.3"/></svg>' +
+      '选择游戏</button>';
+  }
+
   function actQ(text) {
     return '<i class="act-q" title="' + U.escapeHtml(text) + '">?</i>';
   }
@@ -1160,7 +1166,7 @@
       '</label><div class="ctrl">' + actStepHtml({ key: 'wager', min: 0, max: 999, ph: '请输入打码量倍数' }, cfg.wager === '' || cfg.wager == null ? '' : cfg.wager) +
       '</div></div>' +
       '<div class="form-item"><label>活动允许游戏 ' + actQ('请选择活动允许游戏') +
-      '</label><div class="ctrl"><button class="btn btn-black act-game-btn" type="button" id="aPickGames">选择游戏</button>' +
+      '</label><div class="ctrl">' + actGamePickBtn('aPickGames') +
       '<div class="act-game-hint" id="aGamesHint">' + (names.length ? names.join('、') : '未选择') + '</div>' +
       '<div class="act-game-panel" id="aGamePanel" hidden>' + gameBoxes + '</div></div></div>' +
       '<div class="act-sec">VIP返现比例 ' + actQ('根据会员等级对应的返现比例进行返现。') + '</div>' +
@@ -1489,7 +1495,7 @@
       '<div class="extra">mp4.webm格式视频</div></div></div>' +
       '<div class="act-lt-sec">可选任务配置</div>' +
       '<div class="form-item"><label>活动允许游戏 ' + actQ('全不选则不限制游戏') + '</label><div class="ctrl">' +
-      '<button class="btn btn-black act-game-btn" type="button" id="aLtPickGames">选择游戏</button>' +
+      actGamePickBtn('aLtPickGames') +
       '<div class="act-game-hint" id="aLtGamesHint">' + (names.length ? names.join('、') : '未选择') + '</div>' +
       '<div class="act-game-panel" id="aLtGamePanel" hidden>' + gameBoxes + '</div></div></div>' +
       '<div class="act-lt-table-head"><button type="button" class="btn btn-black" id="aLtAddTask">新增任务</button></div>' +
