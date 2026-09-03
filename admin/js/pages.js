@@ -2343,7 +2343,8 @@
       },
       toolbar: '<button class="btn btn-black" type="button" data-add>+ 新增</button>' +
         '<button class="btn btn-danger" type="button" data-del>删除</button>' +
-        '<button class="btn btn-black" type="button" data-tags>标签管理</button>',
+        '<button class="btn btn-black" type="button" data-tags>标签管理</button>' +
+        '<button class="btn btn-black" type="button" data-sync-center title="同步活动中心配置">同步</button>',
       head: ['<input type="checkbox" data-all>', '活动ID', '标题', '移动端图标', 'PC端图标', '类型', '选择标签', '排序', '状态', '悬浮开关', '操作'],
       rows: function (d, q) {
         return (d.activities || []).filter(function (a) {
@@ -2603,6 +2604,42 @@
         if (add) add.onclick = function () { form(null); };
         var tagsBtn = root.querySelector('[data-tags]');
         if (tagsBtn) tagsBtn.onclick = openTags;
+        var syncBtn = root.querySelector('[data-sync-center]');
+        if (syncBtn) {
+          syncBtn.onclick = function () {
+            if (syncBtn.disabled) return;
+            U.confirm('确认同步活动中心配置？').then(function (ok) {
+              if (!ok) return;
+              var cur = S.load();
+              if (cur.demo && cur.demo.failApi) {
+                U.toast('同步失败，请重试', 'err');
+                return;
+              }
+              syncBtn.disabled = true;
+              syncBtn.textContent = '同步中…';
+              setTimeout(function () {
+                var data = S.load();
+                if (data.demo && data.demo.failApi) {
+                  syncBtn.disabled = false;
+                  syncBtn.textContent = '同步';
+                  U.toast('同步失败，请重试', 'err');
+                  return;
+                }
+                var list = data.activities || [];
+                data.activityCenter = {
+                  syncedAt: S.now(),
+                  operator: (S.getSession() || {}).name || 'admin',
+                  count: list.length,
+                  items: S.clone(list)
+                };
+                S.save(data);
+                syncBtn.disabled = false;
+                syncBtn.textContent = '同步';
+                U.toast('已同步活动中心配置');
+              }, 480);
+            });
+          };
+        }
         $$ (root, '[data-ed]').forEach(function (b) {
           b.onclick = function () { form(d.activities.filter(function (a) { return a.id === b.getAttribute('data-ed'); })[0]); };
         });

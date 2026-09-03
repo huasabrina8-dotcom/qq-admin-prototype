@@ -139,6 +139,7 @@ button, input, select { font-family: inherit; }
 }
 .btn-black { background: #111; color: #fff; }
 .btn-black:hover { background: #000; }
+.btn:disabled { opacity: .55; pointer-events: none; }
 .btn-red { background: #fff; color: var(--red); border: 1px solid var(--red); }
 .btn-ghost { background: #fff; border: 1px solid #d9dce1; color: var(--text); }
 .btn-link { background: none; border: 0; color: #1677ff; cursor: pointer; padding: 0 6px; }
