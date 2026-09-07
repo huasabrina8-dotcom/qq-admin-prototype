@@ -326,6 +326,7 @@
       games: [],
       vip_ratio: [0, 0, 0, 0, 0, 0],
       extra_on: 1,
+      extra_wager: '',
       extra_ratio: [1, 1, 1, 1, 1, 1],
       extra_days: [1, 1, 1, 1, 1, 1, 1],
       total_loss_on: 0

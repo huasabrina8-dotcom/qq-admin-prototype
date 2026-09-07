@@ -1138,10 +1138,13 @@
       return '<label class="act-day"><input type="checkbox" data-day="' + i + '"' +
         (cfg.extra_days && cfg.extra_days[i] ? ' checked' : '') + '> ' + d + '</label>';
     }).join('');
-    return '<div class="arco-form act-cfg-form">' + lossCommonTopHtml(cfg) +
+    return '<div class="arco-form act-cfg-form">' + lossCommonTopHtml(cfg, { wagerLabel: '周亏损打码量倍数' }) +
       '<div class="form-item"><label>额外周亏损返奖开关</label><div class="ctrl">' +
       '<button class="switch' + (cfg.extra_on ? ' on' : '') + '" type="button" data-cfg-sw="extra_on"><i></i></button></div></div>' +
       '<div data-extra-block' + (cfg.extra_on ? '' : ' hidden') + '>' +
+      '<div class="form-item"><label class="req">周亏损额外奖励打码倍数 ' + actQ('额外周亏损奖励领取后打码倍数，设置为0时不限流水') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'extra_wager', min: 0, max: 999, ph: '请输入周亏损额外奖励打码倍数' }, cfg.extra_wager === '' || cfg.extra_wager == null ? '' : cfg.extra_wager) +
+      '</div></div>' +
       '<div class="act-sec">额外周亏损返奖比例</div>' +
       weekLossVipTable('extra_ratio', cfg.extra_ratio || [1, 1, 1, 1, 1, 1], '返奖比例') +
       '<div class="form-item"><label class="req">额外周亏损返奖时间</label><div class="ctrl act-days">' + dayHtml + '</div></div>' +
@@ -1152,7 +1155,10 @@
       '</div>';
   }
 
-  function lossCommonTopHtml(cfg) {
+  function lossCommonTopHtml(cfg, opt) {
+    opt = opt || {};
+    var wagerLabel = opt.wagerLabel || '打码量倍数';
+    var wagerPh = '请输入' + wagerLabel;
     var games = cfg.games || [];
     var opts = S.ACT_GAME_OPTS || [];
     var names = opts.filter(function (g) { return games.indexOf(g.id) >= 0; }).map(function (g) { return g.name; });
@@ -1162,8 +1168,8 @@
     }).join('');
     return '<div class="form-item"><label>最高返现奖励 ' + actQ('请输入最高返现奖励金额，0 为不限制') +
       '</label><div class="ctrl">' + actStepHtml({ key: 'max_reward', min: 0, max: 999999 }, cfg.max_reward) + '</div></div>' +
-      '<div class="form-item"><label class="req">打码量倍数 ' + actQ('活动领取奖金打码量倍数，设置为0时不限流水') +
-      '</label><div class="ctrl">' + actStepHtml({ key: 'wager', min: 0, max: 999, ph: '请输入打码量倍数' }, cfg.wager === '' || cfg.wager == null ? '' : cfg.wager) +
+      '<div class="form-item"><label class="req">' + wagerLabel + ' ' + actQ('活动领取奖金打码量倍数，设置为0时不限流水') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'wager', min: 0, max: 999, ph: wagerPh }, cfg.wager === '' || cfg.wager == null ? '' : cfg.wager) +
       '</div></div>' +
       '<div class="form-item"><label>活动允许游戏 ' + actQ('请选择活动允许游戏') +
       '</label><div class="ctrl">' + actGamePickBtn('aPickGames') +
@@ -2039,6 +2045,8 @@
     cfg.vip_ratio = $$ (document, '[data-vip="vip_ratio"]').map(function (el) { return Number(el.value) || 0; });
     var extraSw = document.querySelector('[data-cfg-sw="extra_on"]');
     cfg.extra_on = extraSw && extraSw.classList.contains('on') ? 1 : 0;
+    var extraWagerEl = document.querySelector('[data-cfg="extra_wager"]');
+    cfg.extra_wager = extraWagerEl ? String(extraWagerEl.value).trim() : '';
     cfg.extra_ratio = $$ (document, '[data-vip="extra_ratio"]').map(function (el) { return Number(el.value) || 0; });
     cfg.extra_days = $$ (document, '[data-day]').map(function (el) { return el.checked ? 1 : 0; });
     var lossSw = document.querySelector('[data-cfg-sw="total_loss_on"]');
@@ -2228,10 +2236,13 @@
 
   function validActCfg(type, cfg) {
     if (type === 'weekLoss' || type === 'dayLoss') {
-      if (cfg.wager === '' || isNaN(Number(cfg.wager))) return '请输入打码量倍数';
+      if (cfg.wager === '' || isNaN(Number(cfg.wager))) {
+        return type === 'weekLoss' ? '请输入周亏损打码量倍数' : '请输入打码量倍数';
+      }
       if (!cfg.games || !cfg.games.length) return '请选择活动允许游戏';
-      if (type === 'weekLoss' && cfg.extra_on && !(cfg.extra_days || []).some(function (d) { return d; })) {
-        return '额外周亏损返奖时间不能为空';
+      if (type === 'weekLoss' && cfg.extra_on) {
+        if (cfg.extra_wager === '' || isNaN(Number(cfg.extra_wager))) return '请输入周亏损额外奖励打码倍数';
+        if (!(cfg.extra_days || []).some(function (d) { return d; })) return '额外周亏损返奖时间不能为空';
       }
       return '';
     }
