@@ -1081,6 +1081,10 @@
     return S.ACT_NO_FLOAT && S.ACT_NO_FLOAT[type] ? null : 0;
   }
 
+  function syncPetEntryFlag() {
+    try { localStorage.setItem('mengchong_float_entry_v1', '1'); } catch (e) {}
+  }
+
   function actCfgVal(row, field) {
     var cfg = (row && row.cfg) || {};
     return cfg[field.key] != null ? cfg[field.key] : field.def;
@@ -1130,6 +1134,48 @@
     }).join('');
     return '<table class="act-vip-table"><thead><tr><th>VIP等级</th><th>' + col2 + '</th></tr></thead><tbody>' +
       rows + '</tbody></table>';
+  }
+
+  function petNestBodyHtml(cfg) {
+    cfg = cfg || {};
+    var stages = cfg.stages || [];
+    var rewards = cfg.rewards || [];
+    var stageRows = stages.map(function (s, i) {
+      return '<tr><td>' + U.escapeHtml(s.from) + '</td><td>' + U.escapeHtml(s.to) + '</td><td>' +
+        actStepHtml({ key: 'stage_days_' + i, min: 1, max: 999 }, s.days) + '</td><td>' +
+        actStepHtml({ key: 'stage_acts_' + i, min: 1, max: 9999 }, s.acts) + '</td><td>' +
+        actStepHtml({ key: 'stage_chats_' + i, min: 1, max: 99 }, s.chats) + '</td></tr>';
+    }).join('');
+    var rewardRows = rewards.map(function (r, i) {
+      var max = r.kind === '小时' ? 168 : (r.kind === '亲密度' ? 999 : 999999);
+      return '<tr><td>' + U.escapeHtml(r.name) + '</td><td>' + U.escapeHtml(r.kind) + '</td><td>' +
+        actStepHtml({ key: 'reward_val_' + i, min: 1, max: max }, r.value) + '</td></tr>';
+    }).join('');
+    var entryOn = cfg.entry_on !== 0 && cfg.entry_on !== false;
+    return '<div class="arco-form act-cfg-form">' +
+      '<div class="form-item"><label class="req">活动开关 ' + actQ('打开后悬浮入口显示，关闭后悬浮入口隐藏') +
+      '</label><div class="ctrl"><button class="switch' + (entryOn ? ' on' : '') + '" type="button" data-cfg-sw="entry_on"><i></i></button>' +
+      '<div class="extra">打开后悬浮入口显示，关闭后悬浮入口隐藏</div></div></div>' +
+      '<div class="form-item"><label class="req">抚养间隔（小时） ' + actQ('每间隔内互动最多计 1 个合格抚养日') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'cadence_hours', min: 1, max: 168, ph: '请输入抚养间隔' }, cfg.cadence_hours == null ? 24 : cfg.cadence_hours) +
+      '</div></div>' +
+      '<div class="form-item"><label class="req">亲密度保护（小时） ' + actQ('互动后该时长内不降亲密度；超时未互动亲密度 -1，不降 VIP') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'care_protect_hours', min: 0, max: 168, ph: '请输入亲密度保护时长' }, cfg.care_protect_hours == null ? 24 : cfg.care_protect_hours) +
+      '</div></div>' +
+      '<div class="act-sec">形态成长门槛</div>' +
+      '<p class="act-tt-note">* 升 VIP 不换装。VIP0 与 VIP1 成长上限都是银徽；VIP2 管家、VIP3 金甲、VIP4 翼宠、VIP5 冠宠。窝内无付费门槛。</p>' +
+      '<table class="act-vip-table"><thead><tr><th>当前形态</th><th>下一形态</th><th>合格抚养日</th><th>本档互动次数</th><th>当日对话</th></tr></thead><tbody>' +
+      stageRows + '</tbody></table>' +
+      '<div class="act-sec">冠宠五选一</div>' +
+      '<p class="act-tt-note">* 养成到冠宠后，每个品种可自选一次。真金按打码倍数计流水；亲密度、积分、双倍不计流水。</p>' +
+      '<table class="act-vip-table"><thead><tr><th>奖励</th><th>种类</th><th>数值</th></tr></thead><tbody>' +
+      rewardRows + '</tbody></table>' +
+      '<div class="form-item"><label class="req">真金打码倍数 ' + actQ('仅现金奖励领取后打码，设置为 0 时不限流水') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'cash_wager', min: 0, max: 999, ph: '请输入真金打码倍数' }, cfg.cash_wager == null ? 1 : cfg.cash_wager) +
+      '</div></div>' +
+      '<div class="form-item"><label>每日免费补给</label><div class="ctrl">' +
+      '<button class="switch' + (cfg.free_supply ? ' on' : '') + '" type="button" data-cfg-sw="free_supply"><i></i></button></div></div>' +
+      '</div>';
   }
 
   function weekLossBodyHtml(cfg) {
@@ -1609,6 +1655,7 @@
       if (row && row.startAt && !lcfg.startAt) lcfg.startAt = row.startAt;
       return lotteryBodyHtml(lcfg);
     }
+    if (type === 'petNest') return '';
     var fields = (S.ACT_TYPE_FIELDS || {})[type] || [];
     if (!fields.length) return '<div class="act-type-empty">请选择活动类型</div>';
     var tip = '';
@@ -2210,12 +2257,75 @@
     return '';
   }
 
+  function petCfgText(key) {
+    var el = document.querySelector('[data-cfg="' + key + '"]');
+    return el ? String(el.value).trim() : '';
+  }
+
+  function readPetNestCfg() {
+    var cfg = S.defaultPetNestCfg ? S.defaultPetNestCfg() : { stages: [], rewards: [] };
+    var h5 = document.getElementById('aH5');
+    var pc = document.getElementById('aPC');
+    cfg.mobileIcon = !!(h5 && h5.classList.contains('done'));
+    cfg.pcIcon = !!(pc && pc.classList.contains('done'));
+    cfg.cadence_hours = petCfgText('cadence_hours');
+    cfg.care_protect_hours = petCfgText('care_protect_hours');
+    cfg.cash_wager = petCfgText('cash_wager');
+    cfg.stages = (cfg.stages || []).map(function (s, i) {
+      return {
+        from: s.from,
+        to: s.to,
+        days: petCfgText('stage_days_' + i),
+        acts: petCfgText('stage_acts_' + i),
+        chats: petCfgText('stage_chats_' + i)
+      };
+    });
+    cfg.rewards = (cfg.rewards || []).map(function (r, i) {
+      return { name: r.name, kind: r.kind, value: petCfgText('reward_val_' + i) };
+    });
+    var sw = document.querySelector('[data-cfg-sw="free_supply"]');
+    cfg.free_supply = sw && sw.classList.contains('on') ? 1 : 0;
+    var entry = document.querySelector('[data-cfg-sw="entry_on"]');
+    cfg.entry_on = entry && entry.classList.contains('on') ? 1 : 0;
+    return cfg;
+  }
+
+  function petIntOk(v, min, max) {
+    if (v === '' || v == null) return false;
+    var n = Number(v);
+    return !isNaN(n) && n === Math.floor(n) && n >= min && n <= max;
+  }
+
+  function validPetNestCfg(cfg) {
+    if (!petIntOk(cfg.cadence_hours, 1, 168)) return '请输入抚养间隔（1～168 小时）';
+    if (!petIntOk(cfg.care_protect_hours, 0, 168)) return '请输入亲密度保护时长（0～168 小时）';
+    var stages = cfg.stages || [];
+    if (stages.length !== 5) return '形态成长门槛须为五档';
+    for (var i = 0; i < stages.length; i++) {
+      var s = stages[i];
+      var label = (s.from || '') + '→' + (s.to || '');
+      if (!petIntOk(s.days, 1, 999)) return label + ' 合格抚养日须为 1～999 的整数';
+      if (!petIntOk(s.acts, 1, 9999)) return label + ' 本档互动次数须为 1～9999 的整数';
+      if (!petIntOk(s.chats, 1, 99)) return label + ' 当日对话须为 1～99 的整数';
+    }
+    var rewards = cfg.rewards || [];
+    if (rewards.length !== 5) return '冠宠五选一须为五项';
+    for (var j = 0; j < rewards.length; j++) {
+      var r = rewards[j];
+      var max = r.kind === '小时' ? 168 : (r.kind === '亲密度' ? 999 : 999999);
+      if (!petIntOk(r.value, 1, max)) return (r.name || '奖励') + '数值须为 1～' + max + ' 的整数';
+    }
+    if (!petIntOk(cfg.cash_wager, 0, 999)) return '请输入真金打码倍数';
+    return '';
+  }
+
   function readActCfg(type) {
     if (type === 'weekLoss') return readWeekLossCfg();
     if (type === 'dayLoss') return readDayLossCfg();
     if (type === 'rain') return readRainCfg();
     if (type === 'turntable') return readTurntableCfg();
     if (type === 'lottery') return readLotteryCfg();
+    if (type === 'petNest') return S.defaultPetNestCfg ? S.defaultPetNestCfg() : {};
     var fields = (S.ACT_TYPE_FIELDS || {})[type] || [];
     var cfg = S.defaultActCfg ? S.defaultActCfg(type) : {};
     fields.forEach(function (f) {
@@ -2321,6 +2431,7 @@
       }
       return '';
     }
+    if (type === 'petNest') return '';
     var fields = (S.ACT_TYPE_FIELDS || {})[type] || [];
     for (var i = 0; i < fields.length; i++) {
       var f = fields[i];
@@ -2372,7 +2483,7 @@
       },
       rowHtml: function (a) {
         var tag = a.tag ? '<span class="tag">' + U.escapeHtml(a.tag) + '</span>' : '--';
-        var fl = a.floatOn == null ? '<span class="muted">--</span>' : U.switchBtn(a.floatOn === 1, 'fl-' + a.id);
+        var fl = (a.type === 'petNest' || a.floatOn == null) ? '<span class="muted">--</span>' : U.switchBtn(a.floatOn === 1, 'fl-' + a.id);
         return '<tr><td><input type="checkbox" data-id="' + a.id + '"></td><td>' + U.escapeHtml(String(a.id)) +
           '</td><td class="td-title">' + U.escapeHtml(a.title) + '</td><td>' + actIconHtml(a, 'h5') +
           '</td><td>' + actIconHtml(a, 'pc') + '</td><td>' + typeLabel(a.type) + '</td><td>' + tag +
@@ -2395,7 +2506,14 @@
             if (!box || !typeEl) return;
             var type = typeEl.value;
             var src = row && row.type === type ? row : null;
-            box.classList.toggle('has-type', !!type);
+            var page = box.closest('.act-form-page');
+            if (page) page.classList.toggle('is-pet-nest', type === 'petNest');
+            box.classList.toggle('has-type', !!type && type !== 'petNest');
+            if (type === 'petNest') {
+              if (head) head.innerHTML = '';
+              box.innerHTML = '';
+              return;
+            }
             if (head) {
               if (type === 'weekLoss' || type === 'dayLoss' || type === 'rain' || type === 'turntable' || type === 'lottery') {
                 var headCfg = (src && src.cfg) ? src.cfg : (
@@ -2439,11 +2557,17 @@
               var title = document.getElementById('aTitle').value.trim();
               var type = document.getElementById('aType').value;
               var tag = document.getElementById('aTag').value;
+              if (type === 'petNest') {
+                if (!title) title = (row && row.title) || '宠物窝';
+                if (!tag) tag = (row && row.tag) || '活动平台活动';
+              }
               if (!title) { U.toast('请输入活动标题', 'err'); return; }
               if (!type) { U.toast('请选择活动类型', 'err'); return; }
               if (!tag) { U.toast('请选择标签', 'err'); return; }
-              var cfg = readActCfg(type);
-              var cfgErr = validActCfg(type, cfg);
+              var cfg = type === 'petNest'
+                ? ((row && row.cfg) ? row.cfg : (S.defaultPetNestCfg ? S.defaultPetNestCfg() : {}))
+                : readActCfg(type);
+              var cfgErr = type === 'petNest' ? '' : validActCfg(type, cfg);
               if (cfgErr) { U.toast(cfgErr, 'err'); return; }
               var data = S.load();
               var payload = {
@@ -2455,17 +2579,18 @@
                 startAt: (type === 'lottery' && cfg.startAt) ? cfg.startAt : ((row && row.startAt) || ''),
                 endAt: (row && row.endAt) || ''
               };
+              if (type === 'petNest') payload.floatOn = null;
               if (row) {
                 var a = data.activities.filter(function (x) { return x.id === row.id; })[0];
                 if (!a) { U.toast('活动不存在', 'err'); return; }
                 Object.keys(payload).forEach(function (k) { a[k] = payload[k]; });
-                if (S.ACT_NO_FLOAT[type]) a.floatOn = null;
+                if (type === 'petNest' || S.ACT_NO_FLOAT[type]) a.floatOn = null;
                 else if (a.floatOn == null) a.floatOn = 0;
               } else {
                 data.activities.unshift({
                   id: nextActId(data.activities),
                   status: 0,
-                  floatOn: actFloatDefault(type),
+                  floatOn: (type === 'petNest' || (S.ACT_NO_FLOAT && S.ACT_NO_FLOAT[type])) ? null : actFloatDefault(type),
                   createdAt: S.now(),
                   title: payload.title,
                   type: payload.type,
@@ -2477,6 +2602,7 @@
                 });
               }
               S.save(data);
+              if (type === 'petNest') syncPetEntryFlag();
               U.closeDrawer();
               U.toast('已保存（演示，不改正式数据）');
               redraw();
@@ -2686,8 +2812,9 @@
             var a = data.activities.filter(function (x) { return x.id === key.slice(3); })[0];
             if (!a) return;
             if (key.indexOf('st-') === 0) a.status = a.status === 1 ? 0 : 1;
-            else if (a.floatOn != null) a.floatOn = a.floatOn === 1 ? 0 : 1;
+            else if (a.type !== 'petNest' && a.floatOn != null) a.floatOn = a.floatOn === 1 ? 0 : 1;
             S.save(data);
+            if (a.type === 'petNest') syncPetEntryFlag();
             redraw();
           };
         });

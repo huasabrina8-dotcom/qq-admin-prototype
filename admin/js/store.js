@@ -174,6 +174,7 @@
     { id: 'rain', label: '金钱如雨' },
     { id: 'turntable', label: '转盘奖励' },
     { id: 'ad', label: '广告活动' },
+    { id: 'petNest', label: '宠物窝' },
     { id: 'customAct', label: '自定义活动' },
     { id: 'regBonus', label: '注册免费送' },
     { id: 'rebate', label: '投注返水' },
@@ -196,7 +197,8 @@
   var ACT_NO_FLOAT = {
     rescue: 1, checkin: 1, first: 1, rebate: 1, weekLoss: 1, dayLoss: 1,
     regBonus: 1, video: 1, returnPlayer: 1, prizeOnPrize: 1, slotDaily: 1,
-    weekInvite: 1, vip: 1, dailyEgg: 1, weekGift: 1, dailyLucky: 1, monthGift: 1
+    weekInvite: 1, vip: 1, dailyEgg: 1, weekGift: 1, dailyLucky: 1, monthGift: 1,
+    petNest: 1
   };
 
   var ACT_TYPE_FIELDS = {
@@ -531,12 +533,39 @@
     return cfg;
   }
 
+  function defaultPetNestCfg() {
+    return {
+      mobileIcon: 0,
+      pcIcon: 0,
+      cadence_hours: 24,
+      care_protect_hours: 24,
+      stages: [
+        { from: '幼宠', to: '银徽', days: 2, acts: 6, chats: 2 },
+        { from: '银徽', to: '管家', days: 4, acts: 12, chats: 2 },
+        { from: '管家', to: '金甲', days: 6, acts: 20, chats: 3 },
+        { from: '金甲', to: '翼宠', days: 10, acts: 36, chats: 3 },
+        { from: '翼宠', to: '冠宠', days: 14, acts: 56, chats: 4 }
+      ],
+      rewards: [
+        { name: '现金奖励', kind: '真金', value: 88 },
+        { name: '现金奖励', kind: '真金', value: 188 },
+        { name: '亲密度大礼包', kind: '亲密度', value: 8 },
+        { name: '今日积分加成', kind: '积分', value: 50 },
+        { name: '双倍亲密度', kind: '小时', value: 24 }
+      ],
+      cash_wager: 1,
+      free_supply: 1,
+      entry_on: 1
+    };
+  }
+
   function defaultActCfg(type) {
     if (type === 'weekLoss') return defaultWeekLossCfg();
     if (type === 'dayLoss') return defaultDayLossCfg();
     if (type === 'rain') return defaultRainCfg();
     if (type === 'turntable') return defaultTurntableCfg();
     if (type === 'lottery') return defaultLotteryCfg();
+    if (type === 'petNest') return defaultPetNestCfg();
     var out = {};
     (ACT_TYPE_FIELDS[type] || []).forEach(function (f) { out[f.key] = f.def; });
     return out;
@@ -555,6 +584,7 @@
 
   function defaultActivities() {
     return [
+      { id: '1500288', title: '宠物窝', type: 'petNest', tag: '活动平台活动', sort: 1004, status: 1, floatOn: null, startAt: '2026-08-01 00:00:00', endAt: '', createdAt: '2026-08-12 09:18:00', cfg: defaultPetNestCfg() },
       { id: '1500275', title: '次日救援金', type: 'rescue', tag: '活动平台活动', sort: 1003, status: 0, floatOn: null, startAt: '2026-05-01 00:00:00', endAt: '', createdAt: '2026-04-28 10:12:08' },
       { id: '1500270', title: '每日签到', type: 'checkin', tag: 'GO活动', sort: 1002, status: 1, floatOn: null, startAt: '2026-05-01 00:00:00', endAt: '', createdAt: '2026-04-26 09:30:00' },
       { id: '1350272', title: '宝箱裂变0501', type: 'box', tag: 'GO活动', sort: 1001, status: 1, floatOn: 1, startAt: '2026-05-01 00:00:00', endAt: '2026-12-31 23:59:59', createdAt: '2026-04-20 11:20:00' },
@@ -818,7 +848,7 @@
       layerReports: defaultLayerReports(),
       demo: { failApi: false, empty: false },
       catalog: {},
-      catalogVer: 23,
+      catalogVer: 24,
       seq: 100
     };
   }
@@ -829,7 +859,7 @@
       if (raw) {
         var data = JSON.parse(raw);
         if (data && data.members) {
-          if (!data.dailyTasks || !data.moneyRainReports || !data.codes || !data.codes[0] || !data.codes[0].redemption_code || !data.layerConfig || !data.layerConfig.rules || !data.codeLimit || !data.codeLimit.groups || !data.layerReports || !data.activityTags || data.catalogVer < 23) {
+          if (!data.dailyTasks || !data.moneyRainReports || !data.codes || !data.codes[0] || !data.codes[0].redemption_code || !data.layerConfig || !data.layerConfig.rules || !data.codeLimit || !data.codeLimit.groups || !data.layerReports || !data.activityTags || data.catalogVer < 24) {
             if (!data.dailyTasks) {
               data.dailyTasks = defaultDailyTasks();
               data.dailyTaskBase = defaultDailyTaskBase();
@@ -858,7 +888,7 @@
             } else if (data.catalogVer < 17) {
               data.activityTags = defaultActivityTags();
             }
-            if (data.catalogVer < 23) {
+            if (data.catalogVer < 24) {
               data.activities = defaultActivities();
             }
             if (!data.groups || !data.groups.some(function (g) { return g.name === 'Day2用户'; })) {
@@ -868,13 +898,31 @@
                 { id: 'g8', name: 'Day4用户', count: 1, remark: '注册第4日分层' }
               ]);
             }
-            data.catalogVer = 23;
+            data.catalogVer = 24;
             if (data.catalog) {
               delete data.catalog.taskDailyTask;
               delete data.catalog.moneyRainReport;
               delete data.catalog.codes;
             }
             save(data);
+          }
+          if (data.activities && !data.activities.some(function (a) { return a.type === 'petNest'; })) {
+            var petRow = defaultActivities().filter(function (a) { return a.type === 'petNest'; })[0];
+            if (petRow) {
+              data.activities.unshift(petRow);
+              save(data);
+            }
+          }
+          if (data.activities) {
+            var petDash = false;
+            data.activities.forEach(function (a) {
+              if (!a || a.type !== 'petNest' || a.floatOn == null) return;
+              if (!a.cfg) a.cfg = defaultPetNestCfg();
+              a.cfg.entry_on = a.floatOn === 1 ? 1 : 0;
+              a.floatOn = null;
+              petDash = true;
+            });
+            if (petDash) save(data);
           }
           return data;
         }
@@ -1063,6 +1111,7 @@
     defaultTurntableCfg: defaultTurntableCfg,
     demoTurntableCfg: demoTurntableCfg,
     defaultLotteryCfg: defaultLotteryCfg,
+    defaultPetNestCfg: defaultPetNestCfg,
     demoLotteryCfg: demoLotteryCfg,
     lotteryRankLabel: lotteryRankLabel,
     ACT_LT_CONDS: ACT_LT_CONDS,

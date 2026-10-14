@@ -973,6 +973,9 @@ body > .submodal {
   padding: 16px 8px 0;
   min-height: 0;
 }
+.act-form-page.is-pet-nest .form-item:not(:has(#aType)) { display: none; }
+.act-form-page.is-pet-nest #aHeadExtra,
+.act-form-page.is-pet-nest #aTypeBox { display: none !important; }
 .act-type-empty { color: #86909c; font-size: 14px; }
 .act-card {
   border: 1px solid #e5e6eb;
