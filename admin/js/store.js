@@ -238,9 +238,7 @@
     prizeOnPrize: [
       { key: 'popup_min', label: '奖上奖弹窗显示  奖励金额>=', kind: 'step', min: 0, max: 999999, def: 10 }
     ],
-    box: [
-      { key: 'stop_on_parent', label: '上级获得宝箱时停止累计', kind: 'switch', def: 0 }
-    ],
+    box: [],
     slotDaily: [
       { key: 'vip0_rate', label: 'VIP0返水比例(%)', kind: 'step', min: 0, max: 100, def: 1 },
       { key: 'vip15_rate', label: 'VIP1-5返水比例(%)', kind: 'step', min: 0, max: 100, def: 2 }
@@ -559,6 +557,64 @@
     };
   }
 
+  var BOX_OPEN_ACTS = [
+    { id: 'first', label: '当日首存活动' },
+    { id: 'weekLoss', label: '周亏损返现' },
+    { id: 'dayLoss', label: '日亏损返现' },
+    { id: 'rain', label: '金钱如雨' },
+    { id: 'turntable', label: '转盘奖励' },
+    { id: 'ad', label: '广告活动' },
+    { id: 'customAct', label: '自定义活动' },
+    { id: 'regBonus', label: '注册免费送' },
+    { id: 'rebate', label: '投注返水' },
+    { id: 'lottery', label: '抽奖活动' },
+    { id: 'video', label: '视频完播奖励' },
+    { id: 'returnPlayer', label: '回归玩家福利赠送' },
+    { id: 'slotDaily', label: 'slot日返利' },
+    { id: 'weekInvite', label: '周邀请活动' },
+    { id: 'vip', label: 'vip高额工资' },
+    { id: 'checkin', label: '每日签到' },
+    { id: 'dailyEgg', label: '天天砸金蛋' },
+    { id: 'rescue', label: '次日救援金' },
+    { id: 'weekGift', label: '礼金周周送' },
+    { id: 'dailyLucky', label: '天天好运金' },
+    { id: 'monthGift', label: '月存好礼' },
+    { id: 'checkinLoop', label: '每日签到循环' }
+  ];
+
+  function defaultBoxCfg() {
+    return {
+      mobileIcon: 1,
+      pcIcon: 1,
+      open_times: 0,
+      claim_mode: 'manual',
+      tip_limit: 'home',
+      acc_recharge_on: 1,
+      acc_recharge: '100.00',
+      acc_bet_on: 0,
+      acc_bet: '',
+      games: [],
+      recharge_times_on: 0,
+      recharge_times: '',
+      streak_days_on: 0,
+      streak_days: '',
+      reset_hours: 1000,
+      reset_left_sec: 19 * 86400 + 10 * 3600 + 35 * 60 + 14,
+      reward_type: '真金',
+      wager: 10,
+      chests: [
+        { no: '1', users: '1', amount: '10' },
+        { no: '2', users: '2', amount: '20' },
+        { no: '3', users: '3', amount: '30' },
+        { no: '4', users: '4', amount: '40' },
+        { no: '5', users: '5', amount: '50' }
+      ],
+      share_upgrade: 1,
+      open_acts: ['checkin', 'dailyEgg', 'dailyLucky', 'monthGift'],
+      desc: '测试'
+    };
+  }
+
   function defaultActCfg(type) {
     if (type === 'weekLoss') return defaultWeekLossCfg();
     if (type === 'dayLoss') return defaultDayLossCfg();
@@ -566,6 +622,7 @@
     if (type === 'turntable') return defaultTurntableCfg();
     if (type === 'lottery') return defaultLotteryCfg();
     if (type === 'petNest') return defaultPetNestCfg();
+    if (type === 'box') return defaultBoxCfg();
     var out = {};
     (ACT_TYPE_FIELDS[type] || []).forEach(function (f) { out[f.key] = f.def; });
     return out;
@@ -587,7 +644,7 @@
       { id: '1500288', title: '宠物窝', type: 'petNest', tag: '活动平台活动', sort: 1004, status: 1, floatOn: null, startAt: '2026-08-01 00:00:00', endAt: '', createdAt: '2026-08-12 09:18:00', cfg: defaultPetNestCfg() },
       { id: '1500275', title: '次日救援金', type: 'rescue', tag: '活动平台活动', sort: 1003, status: 0, floatOn: null, startAt: '2026-05-01 00:00:00', endAt: '', createdAt: '2026-04-28 10:12:08' },
       { id: '1500270', title: '每日签到', type: 'checkin', tag: 'GO活动', sort: 1002, status: 1, floatOn: null, startAt: '2026-05-01 00:00:00', endAt: '', createdAt: '2026-04-26 09:30:00' },
-      { id: '1350272', title: '宝箱裂变0501', type: 'box', tag: 'GO活动', sort: 1001, status: 1, floatOn: 1, startAt: '2026-05-01 00:00:00', endAt: '2026-12-31 23:59:59', createdAt: '2026-04-20 11:20:00' },
+      { id: '1500277', title: '宝箱裂变活动', type: 'box', tag: 'GO活动', sort: 1001, status: 1, floatOn: 1, startAt: '2026-05-01 00:00:00', endAt: '2026-12-31 23:59:59', createdAt: '2026-04-20 11:20:00', cfg: defaultBoxCfg() },
       { id: '720263', title: '测试自定义跳转', type: 'customAct', tag: 'New', sort: 1000, status: 1, floatOn: null, startAt: '2026-04-16 00:00:00', endAt: '', createdAt: '2026-04-16 14:08:22' },
       { id: '1500265', title: 'Lucky Draw 本期', type: 'lottery', tag: '活动平台活动', sort: 998, status: 1, floatOn: 1, startAt: '2026-08-01 00:00:00', endAt: '2026-08-31 23:59:59', createdAt: '2026-07-20 10:00:00', cfg: demoLotteryCfg() },
       { id: '1500262', title: '金钱如雨周末场', type: 'rain', tag: 'GO活动', sort: 996, status: 1, floatOn: 1, startAt: '2026-08-01 00:00:00', endAt: '2026-08-31 23:59:59', createdAt: '2026-07-21 10:00:00', cfg: demoRainCfg() },
@@ -848,7 +905,7 @@
       layerReports: defaultLayerReports(),
       demo: { failApi: false, empty: false },
       catalog: {},
-      catalogVer: 24,
+      catalogVer: 25,
       seq: 100
     };
   }
@@ -859,7 +916,7 @@
       if (raw) {
         var data = JSON.parse(raw);
         if (data && data.members) {
-          if (!data.dailyTasks || !data.moneyRainReports || !data.codes || !data.codes[0] || !data.codes[0].redemption_code || !data.layerConfig || !data.layerConfig.rules || !data.codeLimit || !data.codeLimit.groups || !data.layerReports || !data.activityTags || data.catalogVer < 24) {
+          if (!data.dailyTasks || !data.moneyRainReports || !data.codes || !data.codes[0] || !data.codes[0].redemption_code || !data.layerConfig || !data.layerConfig.rules || !data.codeLimit || !data.codeLimit.groups || !data.layerReports || !data.activityTags || data.catalogVer < 25) {
             if (!data.dailyTasks) {
               data.dailyTasks = defaultDailyTasks();
               data.dailyTaskBase = defaultDailyTaskBase();
@@ -888,7 +945,7 @@
             } else if (data.catalogVer < 17) {
               data.activityTags = defaultActivityTags();
             }
-            if (data.catalogVer < 24) {
+            if (data.catalogVer < 25) {
               data.activities = defaultActivities();
             }
             if (!data.groups || !data.groups.some(function (g) { return g.name === 'Day2用户'; })) {
@@ -898,7 +955,7 @@
                 { id: 'g8', name: 'Day4用户', count: 1, remark: '注册第4日分层' }
               ]);
             }
-            data.catalogVer = 24;
+            data.catalogVer = 25;
             if (data.catalog) {
               delete data.catalog.taskDailyTask;
               delete data.catalog.moneyRainReport;
@@ -1112,6 +1169,8 @@
     demoTurntableCfg: demoTurntableCfg,
     defaultLotteryCfg: defaultLotteryCfg,
     defaultPetNestCfg: defaultPetNestCfg,
+    defaultBoxCfg: defaultBoxCfg,
+    BOX_OPEN_ACTS: BOX_OPEN_ACTS,
     demoLotteryCfg: demoLotteryCfg,
     lotteryRankLabel: lotteryRankLabel,
     ACT_LT_CONDS: ACT_LT_CONDS,

@@ -1048,10 +1048,14 @@
   };
 
   function actIconHtml(a, kind) {
+    var title = kind === 'pc' ? 'PC端图标' : '移动端图标';
+    if (a.type === 'box') {
+      return '<span class="thumb box-list-ico" title="' + title + '">' + U.escapeHtml(a.title || '宝箱裂变活动') + '</span>';
+    }
     var ch = String(a.title || '?').charAt(0);
     var n = Math.abs(Number(a.id) || 0);
     var cls = 't' + ((kind === 'pc' ? n + 3 : n) % 7);
-    return '<span class="thumb ph act-ico ' + cls + '" title="' + (kind === 'pc' ? 'PC端图标' : '移动端图标') + '">' +
+    return '<span class="thumb ph act-ico ' + cls + '" title="' + title + '">' +
       U.escapeHtml(ch) + '</span>';
   }
 
@@ -1091,10 +1095,12 @@
   }
 
   function actStepHtml(field, val) {
+    var shown = val == null ? '' : String(val);
     return '<div class="stepper list-step act-cfg-step">' +
       '<button type="button" data-cfg-step="' + field.key + '" data-d="-1">−</button>' +
       '<input data-cfg="' + field.key + '" data-kind="step" data-min="' + field.min + '" data-max="' + field.max +
-      '" type="text" placeholder="' + U.escapeHtml(field.ph || '') + '" value="' + U.escapeHtml(String(val)) + '">' +
+      (field.dec ? '" data-dec="' + field.dec : '') +
+      '" type="text" placeholder="' + U.escapeHtml(field.ph || '') + '" value="' + U.escapeHtml(shown) + '">' +
       '<button type="button" data-cfg-step="' + field.key + '" data-d="1">+</button></div>';
   }
 
@@ -1633,7 +1639,335 @@
       '</div>';
   }
 
+  function boxPad(n) { return n < 10 ? '0' + n : String(n); }
+
+  function boxRemainText(sec) {
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    var d = Math.floor(sec / 86400);
+    var h = Math.floor((sec % 86400) / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    return d + '天 ' + boxPad(h) + ':' + boxPad(m) + ':' + boxPad(s);
+  }
+
+  function boxIconSlot(id, on) {
+    return '<div class="box-icon-slot' + (on ? ' done' : '') + '" id="' + id + '" data-up="' + id + '">' +
+      '<span class="plus">+ 本地上传</span><b class="box-icon-word" data-box-word></b></div>' +
+      '<div class="extra">前端活动页面显示用</div>';
+  }
+
+  function boxHeadHtml(cfg) {
+    cfg = cfg || {};
+    return '<div class="arco-form act-cfg-form act-box-form box-icon-form">' +
+      '<div class="form-item"><label class="req">移动端图标</label><div class="ctrl">' + boxIconSlot('aH5', !!cfg.mobileIcon) + '</div></div>' +
+      '<div class="form-item"><label class="req">PC端图标</label><div class="ctrl">' + boxIconSlot('aPC', !!cfg.pcIcon) + '</div></div>' +
+      '</div>';
+  }
+
+  function syncBoxIconWords() {
+    var title = document.getElementById('aTitle');
+    var text = (title && title.value.trim()) || '宝箱裂变活动';
+    $$ (document, '[data-box-word]').forEach(function (el) { el.textContent = text; });
+  }
+
+  function boxChestRows(rows) {
+    return (rows || []).map(function (r) {
+      return '<tr><td><input data-chest="no" type="text" value="' + U.escapeHtml(r.no == null ? '' : String(r.no)) + '"></td>' +
+        '<td><input data-chest="users" type="text" value="' + U.escapeHtml(r.users == null ? '' : String(r.users)) + '"></td>' +
+        '<td><input data-chest="amount" type="text" value="' + U.escapeHtml(r.amount == null ? '' : String(r.amount)) + '"></td>' +
+        '<td><button type="button" class="box-del" data-box-del title="删除">×</button></td></tr>';
+    }).join('');
+  }
+
+  function boxReadChests() {
+    var body = document.getElementById('aBoxChestBody');
+    if (!body) return [];
+    return $$ (body, 'tr').map(function (tr) {
+      function val(k) {
+        var el = tr.querySelector('[data-chest="' + k + '"]');
+        return el ? el.value.trim() : '';
+      }
+      return { no: val('no'), users: val('users'), amount: val('amount') };
+    });
+  }
+
+  function weBarHtml() {
+    function svg(inner) {
+      return '<svg viewBox="0 0 16 16" aria-hidden="true">' + inner + '</svg>';
+    }
+    function btn(cmd, title, html, cls) {
+      return '<button type="button"' + (cls ? ' class="' + cls + '"' : '') +
+        (cmd ? ' data-ed="' + cmd + '"' : '') + ' title="' + title + '">' + html + '</button>';
+    }
+    function drop(cmd, title, html, cls) {
+      return btn(cmd, title, html, 'we-drop' + (cls ? ' ' + cls : ''));
+    }
+    var split = '<span class="we-split"></span>';
+    var quote = svg('<path fill="currentColor" d="M2.2 3h4.2v3.3H4.5c.1 1.5.9 2.3 2.1 2.6v1.5C4.2 10 2.2 8.2 2.2 5.5V3zm7.2 0h4.2v3.3H11.7c.1 1.5.9 2.3 2.1 2.6v1.5C11.4 10 9.4 8.2 9.4 5.5V3z"/>');
+    var dots = svg('<circle cx="3.2" cy="8" r="1.15" fill="currentColor"/><circle cx="8" cy="8" r="1.15" fill="currentColor"/><circle cx="12.8" cy="8" r="1.15" fill="currentColor"/>');
+    var justify = svg('<rect x="2" y="3" width="12" height="1.3" fill="currentColor"/><rect x="2" y="7.3" width="8" height="1.3" fill="currentColor"/><rect x="2" y="11.6" width="12" height="1.3" fill="currentColor"/>');
+    var indent = svg('<path fill="currentColor" d="M2 3.2h2.2v1.4H2zm4 0h8v1.4H6zM2 7.3h2.2v1.4H2zm4 0h8v1.4H6zM2 11.4h12v1.4H2z"/>');
+    var todo = svg('<rect x="2.2" y="2.2" width="11.6" height="11.6" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4.3 8.1l2.3 2.3 4.6-4.8" fill="none" stroke="currentColor" stroke-width="1.3"/>');
+    var bullets = svg('<circle cx="3" cy="4" r="1.05" fill="currentColor"/><rect x="5.8" y="3.3" width="8" height="1.3" fill="currentColor"/><circle cx="3" cy="8" r="1.05" fill="currentColor"/><rect x="5.8" y="7.3" width="8" height="1.3" fill="currentColor"/><circle cx="3" cy="12" r="1.05" fill="currentColor"/><rect x="5.8" y="11.3" width="8" height="1.3" fill="currentColor"/>');
+    var numbers = svg('<path fill="currentColor" d="M2 3h1.3v2.4H2V3zm0 4.2h1.6v1.2H2V7.2zm0 3.3h1.6V12H2v-1.5zM5.8 3.3h8v1.3h-8zm0 4h8v1.3h-8zm0 4h8v1.3h-8z"/>');
+    var smile = svg('<circle cx="8" cy="8" r="5.4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6.8" r=".8" fill="currentColor"/><circle cx="10" cy="6.8" r=".8" fill="currentColor"/><path d="M5.6 9.6c.7 1.3 4.1 1.3 4.8 0" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>');
+    var link = svg('<path d="M6.4 9.2a2.3 2.3 0 010-3.2l1.2-1.2a2.3 2.3 0 013.2 3.2l-.6.6M9.6 6.8a2.3 2.3 0 010 3.2l-1.2 1.2a2.3 2.3 0 01-3.2-3.2l.6-.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>');
+    var image = svg('<rect x="2" y="3" width="12" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="5.4" cy="6.2" r="1" fill="currentColor"/><path d="M3.2 11.2l2.6-2.6 1.8 1.8 2.2-2.2 2.8 3" fill="none" stroke="currentColor" stroke-width="1.1"/>');
+    var table = svg('<rect x="2" y="3" width="12" height="10" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.4h12M2 9.6h12M6 3v10M10 3v10" stroke="currentColor" stroke-width="1"/>');
+    var code = '<span class="we-code">&lt;/&gt;</span>';
+    var hr = svg('<rect x="2" y="4" width="12" height="1.2" fill="currentColor"/><rect x="2" y="7.4" width="12" height="1.2" fill="currentColor"/><rect x="2" y="10.8" width="12" height="1.2" fill="currentColor"/>');
+    var undo = svg('<path d="M6.2 4.2L3 7.2l3.2 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.4 7.2H9a3 3 0 010 6H7.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>');
+    var redo = svg('<path d="M9.8 4.2L13 7.2l-3.2 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.6 7.2H7a3 3 0 000 6H8.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>');
+    var full = svg('<path d="M6 3H3v3M10 3h3v3M13 10v3h-3M3 10v3h3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>');
+    return '<div class="we-row">' +
+      drop('', '正文', '文本', 'we-plain') +
+      btn('formatBlock', '引用', quote, 'we-ico') +
+      split +
+      btn('bold', '加粗', '<b>B</b>', 'we-t') +
+      btn('underline', '下划线', '<u>U</u>', 'we-t') +
+      btn('italic', '斜体', '<i>I</i>', 'we-t') +
+      drop('strikeThrough', '更多', dots, 'we-ico') +
+      drop('foreColor', '字体颜色', '<span>A</span>', 'we-a we-a-fg') +
+      drop('hiliteColor', '背景色', '<span>A</span>', 'we-a we-a-bg') +
+      split +
+      drop('', '字号', '默认', 'we-plain') +
+      drop('', '字体', '默认', 'we-plain') +
+      drop('', '行高', '默认', 'we-plain') +
+      split +
+      drop('', '对齐', justify, 'we-ico') +
+      drop('', '缩进', indent, 'we-ico') +
+      '</div><div class="we-row">' +
+      drop('', '待办', todo, 'we-ico') +
+      drop('insertUnorderedList', '无序列表', bullets, 'we-ico') +
+      drop('insertOrderedList', '有序列表', numbers, 'we-ico') +
+      split +
+      drop('', '表情', smile, 'we-ico') +
+      btn('', '链接', link, 'we-ico') +
+      drop('', '图片', image, 'we-ico') +
+      drop('', '表格', table, 'we-ico') +
+      btn('', '代码', code, 'we-ico') +
+      btn('insertHorizontalRule', '分割线', hr, 'we-ico') +
+      split +
+      btn('undo', '撤销', undo, 'we-ico') +
+      btn('redo', '重做', redo, 'we-ico') +
+      split +
+      btn('', '全屏', full, 'we-ico') +
+      '</div>';
+  }
+
+  function boxBodyHtml(cfg) {
+    cfg = cfg || (S.defaultBoxCfg ? S.defaultBoxCfg() : {});
+    var games = cfg.games || [];
+    var opts = S.ACT_GAME_OPTS || [];
+    var names = opts.filter(function (g) { return games.indexOf(g.id) >= 0; }).map(function (g) { return g.name; });
+    var gameBoxes = opts.map(function (g) {
+      return '<label class="act-day"><input type="checkbox" data-game="' + g.id + '"' +
+        (games.indexOf(g.id) >= 0 ? ' checked' : '') + '> ' + U.escapeHtml(g.name) + '</label>';
+    }).join('');
+    var open = cfg.open_acts || [];
+    var openHtml = (S.BOX_OPEN_ACTS || []).map(function (a) {
+      return '<label class="box-open"><input type="checkbox" data-box-act="' + a.id + '"' +
+        (open.indexOf(a.id) >= 0 ? ' checked' : '') + '> ' + U.escapeHtml(a.label) + '</label>';
+    }).join('');
+    var claim = cfg.claim_mode === 'auto' ? 'auto' : 'manual';
+    var shareOn = cfg.share_upgrade !== 0 && cfg.share_upgrade !== false && cfg.share_upgrade !== '0';
+    return '<div class="act-box-split">' +
+      '<div class="act-box-card"><div class="arco-form act-cfg-form act-box-form">' +
+      '<div class="form-item"><label class="req">开放人群</label><div class="ctrl box-inline">' +
+      '<span>充值次数 &gt;=</span>' +
+      actStepHtml({ key: 'open_times', min: 0, max: 99999 }, cfg.open_times == null ? 0 : cfg.open_times) +
+      '<span>次的用户可看到此活动</span></div></div>' +
+      '<div class="form-item"><label class="req">领取方式</label><div class="ctrl radio-line">' +
+      '<label><input type="radio" name="aBoxClaim" value="auto"' + (claim === 'auto' ? ' checked' : '') + '> 自动派发</label>' +
+      '<label><input type="radio" name="aBoxClaim" value="manual"' + (claim === 'manual' ? ' checked' : '') + '> 手动领取</label>' +
+      '</div></div>' +
+      '<div class="form-item"><label class="req">提示页面限制</label><div class="ctrl radio-line">' +
+      '<label><input type="radio" name="aBoxTip" value="home" checked> 仅在首页&amp;活动页提示</label>' +
+      '</div></div>' +
+      '<div class="form-item box-rules-item"><label class="req">有效用户判定 ' +
+      actQ('勾选的条件同时满足，才计入有效用户。未勾选的条件不判断。') +
+      '</label><div class="ctrl box-rules">' +
+      '<div class="box-rule"><label><input type="checkbox" id="aBoxAccRecharge"' + (cfg.acc_recharge_on ? ' checked' : '') + '> 累计充值 &gt;=</label>' +
+      actStepHtml({ key: 'acc_recharge', min: 0, max: 99999999, dec: 2, ph: '请输入充值金额' }, cfg.acc_recharge_on ? (cfg.acc_recharge == null ? '' : cfg.acc_recharge) : (cfg.acc_recharge || '')) +
+      '</div>' +
+      '<div class="box-rule"><label><input type="checkbox" id="aBoxAccBet"' + (cfg.acc_bet_on ? ' checked' : '') + '> 累计投注 &gt;=</label>' +
+      actStepHtml({ key: 'acc_bet', min: 0, max: 99999999, dec: 2, ph: '请输入投注金额' }, cfg.acc_bet || '') +
+      '</div>' +
+      '<div class="box-game-lab">活动允许游戏 ' + actQ('只统计这里选中的游戏。都不选，则不限制游戏。') + '</div>' +
+      actGamePickBtn('aPickGames') +
+      '<div class="act-game-hint" id="aGamesHint">' + (names.length ? U.escapeHtml(names.join('、')) : '') + '</div>' +
+      '<div class="act-game-panel" id="aGamePanel" hidden>' + gameBoxes + '</div>' +
+      '<div class="box-rule"><label><input type="checkbox" id="aBoxRechargeTimes"' + (cfg.recharge_times_on ? ' checked' : '') + '> 累计充值次数 &gt;=</label>' +
+      actStepHtml({ key: 'recharge_times', min: 0, max: 99999, ph: '请输入次数' }, cfg.recharge_times || '') +
+      '</div>' +
+      '<div class="box-rule"><label><input type="checkbox" id="aBoxStreak"' + (cfg.streak_days_on ? ' checked' : '') + '> 连续充值天数 &gt;=</label>' +
+      actStepHtml({ key: 'streak_days', min: 0, max: 9999, ph: '请输入天数' }, cfg.streak_days || '') +
+      '</div></div></div>' +
+      '<div class="form-item"><label class="req">奖励重置倒计时(h)</label><div class="ctrl box-inline box-reset">' +
+      actStepHtml({ key: 'reset_hours', min: 1, max: 99999 }, cfg.reset_hours == null ? 1000 : cfg.reset_hours) +
+      '<span class="box-left" id="aBoxLeft" data-left="' + (cfg.reset_left_sec == null ? 0 : cfg.reset_left_sec) + '"></span>' +
+      '</div></div></div></div>' +
+      '<div class="act-box-card"><div class="arco-form act-cfg-form act-box-form">' +
+      '<div class="form-item box-reward-item"><label class="req">宝箱奖励配置 ' +
+      actQ('有效人数达到该档，发放对应奖励金额。打码量倍数为 0 时不限流水。') +
+      '</label><div class="ctrl">' +
+      '<div class="box-reward-grid">' +
+      '<div class="box-reward-col"><span class="box-k">奖励类型</span>' +
+      '<select data-cfg="reward_type" class="box-select"><option value="真金"' + (cfg.reward_type !== '彩金' ? ' selected' : '') + '>真金</option>' +
+      '<option value="彩金"' + (cfg.reward_type === '彩金' ? ' selected' : '') + '>彩金</option></select></div>' +
+      '<div class="box-reward-col"><span class="box-k">打码量倍数</span>' +
+      actStepHtml({ key: 'wager', min: 0, max: 999 }, cfg.wager == null ? 10 : cfg.wager) +
+      '</div></div>' +
+      '<table class="act-vip-table box-chest"><thead><tr><th>宝箱编号</th><th>有效人数</th><th>奖励金额</th>' +
+      '<th class="box-add-th"><button type="button" class="btn btn-black box-add" id="aBoxAddChest">+</button></th></tr></thead>' +
+      '<tbody id="aBoxChestBody">' + boxChestRows(cfg.chests || []) + '</tbody></table>' +
+      '</div></div>' +
+      '<div class="form-item"><label class="req">升级分享开关</label><div class="ctrl radio-line">' +
+      '<label><input type="radio" name="aBoxShare" value="1"' + (shareOn ? ' checked' : '') + '> 是</label>' +
+      '<label><input type="radio" name="aBoxShare" value="0"' + (shareOn ? '' : ' checked') + '> 否</label>' +
+      '</div></div>' +
+      '<div class="form-item box-open-item" id="aBoxOpens"' + (shareOn ? '' : ' hidden') + '><label class="req">开放的活动（多选）</label><div class="ctrl box-opens">' +
+      openHtml + '</div></div>' +
+      '<div class="form-item box-desc-item"><label class="req">活动说明</label><div class="ctrl">' +
+      '<div class="box-editor"><div class="box-editor-bar">' + weBarHtml() +
+      '</div><div class="box-editor-body" id="aBoxDesc" contenteditable="true">' +
+      U.escapeHtml(cfg.desc || '') + '</div></div></div></div>' +
+      '</div></div></div>';
+  }
+
+  function bindBoxCfg(box) {
+    if (!box || !box.querySelector('.act-box-split')) return;
+    function paintChests(rows) {
+      var body = document.getElementById('aBoxChestBody');
+      if (!body) return;
+      body.innerHTML = boxChestRows(rows);
+      bindChestDel();
+    }
+    function bindChestDel() {
+      $$ (box, '[data-box-del]').forEach(function (b) {
+        b.onclick = function () {
+          var rows = boxReadChests();
+          if (rows.length <= 1) { U.toast('至少保留一个宝箱', 'err'); return; }
+          var tr = b.closest('tr');
+          var all = $$ (document.getElementById('aBoxChestBody'), 'tr');
+          var idx = all.indexOf(tr);
+          if (idx >= 0) rows.splice(idx, 1);
+          paintChests(rows);
+        };
+      });
+    }
+    bindChestDel();
+    var add = document.getElementById('aBoxAddChest');
+    if (add) add.onclick = function () {
+      var rows = boxReadChests();
+      var next = String(rows.length + 1);
+      rows.push({ no: next, users: '', amount: '' });
+      paintChests(rows);
+    };
+    $$ (box, '[data-ed]').forEach(function (b) {
+      b.onmousedown = function (e) { e.preventDefault(); };
+      b.onclick = function () {
+        var body = document.getElementById('aBoxDesc');
+        if (body) body.focus();
+        var cmd = b.getAttribute('data-ed');
+        if (cmd === 'foreColor') document.execCommand('foreColor', false, '#f53f3f');
+        else if (cmd === 'hiliteColor') document.execCommand('hiliteColor', false, '#ffe58f');
+        else if (cmd === 'formatBlock') document.execCommand('formatBlock', false, 'blockquote');
+        else document.execCommand(cmd, false, null);
+      };
+    });
+    var leftEl = document.getElementById('aBoxLeft');
+    if (window._boxTick) { clearInterval(window._boxTick); window._boxTick = null; }
+    if (leftEl) {
+      var left = Number(leftEl.getAttribute('data-left'));
+      if (isNaN(left)) left = 0;
+      function paintLeft() {
+        var el = document.getElementById('aBoxLeft');
+        if (!el) { clearInterval(window._boxTick); window._boxTick = null; return; }
+        el.setAttribute('data-left', String(left));
+        el.textContent = '重置倒计时剩余时间 ' + boxRemainText(left);
+        if (left > 0) left -= 1;
+      }
+      paintLeft();
+      window._boxTick = setInterval(paintLeft, 1000);
+    }
+    function syncShareOpen() {
+      var item = document.getElementById('aBoxOpens');
+      var share = document.querySelector('input[name="aBoxShare"]:checked');
+      if (item) item.hidden = !(share && share.value === '1');
+    }
+    $$ (box, 'input[name="aBoxShare"]').forEach(function (r) { r.onchange = syncShareOpen; });
+    syncShareOpen();
+    syncBoxIconWords();
+  }
+
+  function readBoxCfg() {
+    var cfg = S.defaultBoxCfg ? S.defaultBoxCfg() : {};
+    var h5 = document.getElementById('aH5');
+    var pc = document.getElementById('aPC');
+    cfg.mobileIcon = !!(h5 && h5.classList.contains('done'));
+    cfg.pcIcon = !!(pc && pc.classList.contains('done'));
+    function txt(key) {
+      var el = document.querySelector('[data-cfg="' + key + '"]');
+      return el ? String(el.value).trim() : '';
+    }
+    cfg.open_times = txt('open_times');
+    var claim = document.querySelector('input[name="aBoxClaim"]:checked');
+    cfg.claim_mode = claim ? claim.value : 'manual';
+    cfg.tip_limit = 'home';
+    cfg.acc_recharge_on = !!(document.getElementById('aBoxAccRecharge') && document.getElementById('aBoxAccRecharge').checked);
+    cfg.acc_recharge = txt('acc_recharge');
+    cfg.acc_bet_on = !!(document.getElementById('aBoxAccBet') && document.getElementById('aBoxAccBet').checked);
+    cfg.acc_bet = txt('acc_bet');
+    cfg.games = $$ (document, '#aGamePanel [data-game]:checked').map(function (c) { return c.getAttribute('data-game'); });
+    cfg.recharge_times_on = !!(document.getElementById('aBoxRechargeTimes') && document.getElementById('aBoxRechargeTimes').checked);
+    cfg.recharge_times = txt('recharge_times');
+    cfg.streak_days_on = !!(document.getElementById('aBoxStreak') && document.getElementById('aBoxStreak').checked);
+    cfg.streak_days = txt('streak_days');
+    cfg.reset_hours = txt('reset_hours');
+    var leftEl = document.getElementById('aBoxLeft');
+    cfg.reset_left_sec = leftEl ? Number(leftEl.getAttribute('data-left')) || 0 : 0;
+    cfg.reward_type = txt('reward_type') || '真金';
+    cfg.wager = txt('wager');
+    cfg.chests = boxReadChests();
+    var share = document.querySelector('input[name="aBoxShare"]:checked');
+    cfg.share_upgrade = share && share.value === '0' ? 0 : 1;
+    cfg.open_acts = $$ (document, '[data-box-act]:checked').map(function (c) { return c.getAttribute('data-box-act'); });
+    var desc = document.getElementById('aBoxDesc');
+    cfg.desc = desc ? desc.textContent.replace(/\u00a0/g, ' ').trim() : '';
+    return cfg;
+  }
+
+  function validBoxCfg(cfg) {
+    if (!cfg.mobileIcon) return '请上传移动端图标';
+    if (!cfg.pcIcon) return '请上传PC端图标';
+    if (cfg.open_times === '' || isNaN(Number(cfg.open_times)) || Number(cfg.open_times) < 0) return '请输入开放人群充值次数';
+    if (!cfg.acc_recharge_on && !cfg.acc_bet_on && !cfg.recharge_times_on && !cfg.streak_days_on) return '请至少勾选一项有效用户判定';
+    if (cfg.acc_recharge_on && (cfg.acc_recharge === '' || isNaN(Number(cfg.acc_recharge)))) return '请输入累计充值金额';
+    if (cfg.acc_bet_on && (cfg.acc_bet === '' || isNaN(Number(cfg.acc_bet)))) return '请输入累计投注金额';
+    if (cfg.recharge_times_on && (cfg.recharge_times === '' || isNaN(Number(cfg.recharge_times)))) return '请输入累计充值次数';
+    if (cfg.streak_days_on && (cfg.streak_days === '' || isNaN(Number(cfg.streak_days)))) return '请输入连续充值天数';
+    if (cfg.reset_hours === '' || isNaN(Number(cfg.reset_hours)) || Number(cfg.reset_hours) < 1) return '请输入奖励重置倒计时';
+    if (!cfg.reward_type) return '请选择奖励类型';
+    if (cfg.wager === '' || isNaN(Number(cfg.wager)) || Number(cfg.wager) < 0) return '请输入打码量倍数';
+    if (!cfg.chests || !cfg.chests.length) return '请至少配置一个宝箱';
+    for (var i = 0; i < cfg.chests.length; i++) {
+      var row = cfg.chests[i];
+      var n = i + 1;
+      if (row.no === '' || isNaN(Number(row.no)) || Number(row.no) < 1) return '请填写第 ' + n + ' 行宝箱编号';
+      if (row.users === '' || isNaN(Number(row.users)) || Number(row.users) < 1) return '请填写第 ' + n + ' 行有效人数';
+      if (row.amount === '' || isNaN(Number(row.amount)) || Number(row.amount) < 0) return '请填写第 ' + n + ' 行奖励金额';
+    }
+    if (cfg.share_upgrade && (!cfg.open_acts || !cfg.open_acts.length)) return '请选择开放的活动';
+    if (!cfg.desc) return '请输入活动说明';
+    return '';
+  }
+
   function actTypeFieldsHtml(type, row) {
+    if (type === 'box') {
+      var bcfg = (row && row.cfg && row.cfg.chests) ? row.cfg : (S.defaultBoxCfg ? S.defaultBoxCfg() : {});
+      return boxBodyHtml(bcfg);
+    }
     if (type === 'weekLoss') {
       var wcfg = (row && row.cfg) ? row.cfg : (S.defaultWeekLossCfg ? S.defaultWeekLossCfg() : {});
       return weekLossBodyHtml(wcfg);
@@ -1690,7 +2024,8 @@
         n += Number(b.getAttribute('data-d')) || 0;
         if (n < min) n = min;
         if (n > max) n = max;
-        inp.value = String(n);
+        var dec = inp.getAttribute('data-dec');
+        inp.value = dec ? n.toFixed(Number(dec)) : String(n);
       };
     });
     $$ (box, '[data-cfg-sw]').forEach(function (b) {
@@ -1720,6 +2055,7 @@
     bindRainCfg(box);
     bindTurntableCfg(box);
     bindLotteryCfg(box);
+    bindBoxCfg(box);
   }
 
   function bindLotteryCfg(box) {
@@ -2320,6 +2656,7 @@
   }
 
   function readActCfg(type) {
+    if (type === 'box') return readBoxCfg();
     if (type === 'weekLoss') return readWeekLossCfg();
     if (type === 'dayLoss') return readDayLossCfg();
     if (type === 'rain') return readRainCfg();
@@ -2345,6 +2682,7 @@
   }
 
   function validActCfg(type, cfg) {
+    if (type === 'box') return validBoxCfg(cfg);
     if (type === 'weekLoss' || type === 'dayLoss') {
       if (cfg.wager === '' || isNaN(Number(cfg.wager))) {
         return type === 'weekLoss' ? '请输入周亏损打码量倍数' : '请输入打码量倍数';
@@ -2515,15 +2853,16 @@
               return;
             }
             if (head) {
-              if (type === 'weekLoss' || type === 'dayLoss' || type === 'rain' || type === 'turntable' || type === 'lottery') {
+              if (type === 'weekLoss' || type === 'dayLoss' || type === 'rain' || type === 'turntable' || type === 'lottery' || type === 'box') {
                 var headCfg = (src && src.cfg) ? src.cfg : (
                   type === 'dayLoss' ? (S.defaultDayLossCfg ? S.defaultDayLossCfg() : {}) :
                   type === 'rain' ? (S.defaultRainCfg ? S.defaultRainCfg() : {}) :
                   type === 'turntable' ? (S.defaultTurntableCfg ? S.defaultTurntableCfg() : {}) :
                   type === 'lottery' ? (S.defaultLotteryCfg ? S.defaultLotteryCfg() : {}) :
+                  type === 'box' ? (S.defaultBoxCfg ? S.defaultBoxCfg() : {}) :
                   (S.defaultWeekLossCfg ? S.defaultWeekLossCfg() : {})
                 );
-                head.innerHTML = weekLossHeadHtml(headCfg);
+                head.innerHTML = type === 'box' ? boxHeadHtml(headCfg) : weekLossHeadHtml(headCfg);
                 $$ (head, '[data-up]').forEach(function (el) {
                   el.onclick = function () { el.classList.toggle('done'); };
                 });
@@ -2614,6 +2953,7 @@
           var countEl = document.getElementById('aTitleCount');
           function syncCount() {
             if (countEl && titleEl) countEl.textContent = String(titleEl.value.length) + '/' + (titleEl.maxLength || 100);
+            if (document.querySelector('.act-box-split, .box-icon-slot')) syncBoxIconWords();
           }
           if (titleEl) titleEl.addEventListener('input', syncCount);
           syncCount();
