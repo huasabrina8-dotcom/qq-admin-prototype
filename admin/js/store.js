@@ -179,6 +179,7 @@
     { id: 'regBonus', label: '注册免费送' },
     { id: 'rebate', label: '投注返水' },
     { id: 'lottery', label: '抽奖活动' },
+    { id: 'rank', label: '排行榜活动' },
     { id: 'video', label: '视频完播奖励' },
     { id: 'returnPlayer', label: '回归玩家福利赠送' },
     { id: 'prizeOnPrize', label: '奖上奖' },
@@ -615,6 +616,122 @@
     };
   }
 
+  var ACT_RANK_TYPES = [
+    { id: 'Slot', name: '电子 Slot' },
+    { id: 'Casino', name: '真人 Casino' },
+    { id: 'Sports', name: '体育 Sports' },
+    { id: 'Card', name: '棋牌 Card' },
+    { id: 'Fishing', name: '捕鱼 Fishing' },
+    { id: 'Bingo', name: '宾果 Bingo' },
+    { id: 'Arcade', name: '街机 Arcade' },
+    { id: 'Perya', name: 'Perya' },
+    { id: 'Numeric', name: '数字彩 Numeric' }
+  ];
+  var ACT_RANK_VENDORS = [
+    { id: 'JILI', name: 'JILI' },
+    { id: 'PG SOFT', name: 'PG SOFT' },
+    { id: 'Evolution', name: 'Evolution' },
+    { id: 'PRAGMATIC PLAY', name: 'PRAGMATIC PLAY' },
+    { id: 'YELLOW BAT', name: 'YELLOW BAT' },
+    { id: 'SABA SPORTS', name: 'SABA SPORTS' },
+    { id: 'SPRIBE', name: 'SPRIBE' }
+  ];
+  var ACT_RANK_GAMES = [
+    { id: 'g01', name: 'Wild Bounty Showdown', vendor: 'PG SOFT' },
+    { id: 'g02', name: 'Wild Bandito', vendor: 'PG SOFT' },
+    { id: 'g03', name: 'Jungle Delight', vendor: 'PG SOFT' },
+    { id: 'g05', name: 'Fortune Ox', vendor: 'PG SOFT' },
+    { id: 'g06', name: 'Piggy Gold', vendor: 'PG SOFT' },
+    { id: 'g07', name: 'Tree of Fortune', vendor: 'JILI' },
+    { id: 'g08', name: 'Leprechaun Riches', vendor: 'PG SOFT' },
+    { id: 'g10', name: 'City Dawgs', vendor: 'JILI' },
+    { id: 'g11', name: 'Mega Bingo', vendor: 'JILI' },
+    { id: 'g14', name: 'Color Game', vendor: 'YELLOW BAT' },
+    { id: 'g17', name: 'Lightning Baccarat', vendor: 'Evolution' },
+    { id: 'g18', name: 'Crazy Time', vendor: 'Evolution' },
+    { id: 'g19', name: 'Sweet Bonanza CandyLand', vendor: 'PRAGMATIC PLAY' },
+    { id: 'g20', name: 'SABA Sports', vendor: 'SABA SPORTS' },
+    { id: 'g22', name: 'Teen Patti', vendor: 'JILI' },
+    { id: 'g23', name: 'Tongits', vendor: 'JILI' },
+    { id: 'g24', name: 'Pusoy', vendor: 'JILI' },
+    { id: 'g25', name: 'Aviator', vendor: 'SPRIBE' },
+    { id: 'g28', name: 'Happy Fishing', vendor: 'JILI' },
+    { id: 'g30', name: '2D Lotto', vendor: 'JILI' }
+  ];
+
+  function defaultRankPrizes() {
+    return [
+      { from: 1, to: 1, amount: '8000.00' },
+      { from: 2, to: 2, amount: '5000.00' },
+      { from: 3, to: 3, amount: '3000.00' },
+      { from: 4, to: 10, amount: '350.00' },
+      { from: 11, to: 20, amount: '150.00' }
+    ];
+  }
+
+  function defaultRankCfg() {
+    return {
+      mobileIcon: 0,
+      pcIcon: 0,
+      scope: 'type',
+      targets: [],
+      min_bet: 100,
+      cycle: 'weekly',
+      startAt: '',
+      endAt: '',
+      reward_type: '真金',
+      wager: 1,
+      claim_mode: 'manual',
+      prizes: defaultRankPrizes(),
+      desc: ''
+    };
+  }
+
+  function demoRankCfg(kind) {
+    var cfg = defaultRankCfg();
+    cfg.mobileIcon = 1;
+    cfg.pcIcon = 1;
+    cfg.min_bet = 100;
+    cfg.reward_type = '真金';
+    cfg.wager = 1;
+    cfg.claim_mode = 'manual';
+    cfg.desc = '有效投注只统计本榜勾选范围。打码量只决定名次，每个名次发放固定奖金，不按打码量占奖池比例分配。榜单每 10 分钟刷新。投注额相同，先达到的排前。结算后 72 小时内手动领取，逾期失效。打码倍数为 0 时不限流水。';
+    if (kind === 'vendor') {
+      cfg.scope = 'vendor';
+      cfg.targets = ['JILI'];
+      cfg.cycle = 'daily';
+      cfg.startAt = '2026-11-04 00:00:00';
+      cfg.endAt = '2026-11-04 23:59:59';
+      cfg.prizes = [
+        { from: 1, to: 1, amount: '3000.00' },
+        { from: 2, to: 2, amount: '2000.00' },
+        { from: 3, to: 3, amount: '1500.00' },
+        { from: 4, to: 10, amount: '200.00' }
+      ];
+      return cfg;
+    }
+    if (kind === 'game') {
+      cfg.scope = 'game';
+      cfg.targets = ['g01'];
+      cfg.cycle = 'period';
+      cfg.startAt = '2026-11-01 00:00:00';
+      cfg.endAt = '2026-11-30 23:59:59';
+      cfg.prizes = [
+        { from: 1, to: 1, amount: '8000.00' },
+        { from: 2, to: 2, amount: '4000.00' },
+        { from: 3, to: 3, amount: '2000.00' },
+        { from: 4, to: 10, amount: '500.00' }
+      ];
+      return cfg;
+    }
+    cfg.scope = 'type';
+    cfg.targets = ['Slot', 'Casino'];
+    cfg.cycle = 'weekly';
+    cfg.startAt = '2026-11-02 00:00:00';
+    cfg.endAt = '2026-11-08 23:59:59';
+    return cfg;
+  }
+
   function defaultActCfg(type) {
     if (type === 'weekLoss') return defaultWeekLossCfg();
     if (type === 'dayLoss') return defaultDayLossCfg();
@@ -623,6 +740,7 @@
     if (type === 'lottery') return defaultLotteryCfg();
     if (type === 'petNest') return defaultPetNestCfg();
     if (type === 'box') return defaultBoxCfg();
+    if (type === 'rank') return defaultRankCfg();
     var out = {};
     (ACT_TYPE_FIELDS[type] || []).forEach(function (f) { out[f.key] = f.def; });
     return out;
@@ -641,6 +759,9 @@
 
   function defaultActivities() {
     return [
+      { id: '1500296', title: '电子与真人周榜', type: 'rank', tag: 'GO活动', sort: 1010, status: 1, floatOn: 1, startAt: '2026-11-02 00:00:00', endAt: '2026-11-08 23:59:59', createdAt: '2026-11-01 10:18:22', cfg: demoRankCfg('type') },
+      { id: '1500295', title: 'JILI 厂商日榜', type: 'rank', tag: 'New', sort: 1009, status: 1, floatOn: 0, startAt: '2026-11-04 00:00:00', endAt: '2026-11-04 23:59:59', createdAt: '2026-11-03 16:02:41', cfg: demoRankCfg('vendor') },
+      { id: '1500294', title: 'Wild Bounty 子游戏榜', type: 'rank', tag: 'GO活动', sort: 1008, status: 1, floatOn: 1, startAt: '2026-11-01 00:00:00', endAt: '2026-11-30 23:59:59', createdAt: '2026-10-31 09:40:05', cfg: demoRankCfg('game') },
       { id: '1500288', title: '宠物窝', type: 'petNest', tag: '活动平台活动', sort: 1004, status: 1, floatOn: null, startAt: '2026-08-01 00:00:00', endAt: '', createdAt: '2026-08-12 09:18:00', cfg: defaultPetNestCfg() },
       { id: '1500275', title: '次日救援金', type: 'rescue', tag: '活动平台活动', sort: 1003, status: 0, floatOn: null, startAt: '2026-05-01 00:00:00', endAt: '', createdAt: '2026-04-28 10:12:08' },
       { id: '1500270', title: '每日签到', type: 'checkin', tag: 'GO活动', sort: 1002, status: 1, floatOn: null, startAt: '2026-05-01 00:00:00', endAt: '', createdAt: '2026-04-26 09:30:00' },
@@ -963,6 +1084,18 @@
             }
             save(data);
           }
+          if (data.activities) {
+            var rankChanged = false;
+            ['1500296', '1500295', '1500294'].forEach(function (rid) {
+              if (data.activities.some(function (a) { return a.id === rid; })) return;
+              var rankRow = defaultActivities().filter(function (a) { return a.id === rid; })[0];
+              if (rankRow) {
+                data.activities.unshift(rankRow);
+                rankChanged = true;
+              }
+            });
+            if (rankChanged) save(data);
+          }
           if (data.activities && !data.activities.some(function (a) { return a.type === 'petNest'; })) {
             var petRow = defaultActivities().filter(function (a) { return a.type === 'petNest'; })[0];
             if (petRow) {
@@ -1170,6 +1303,10 @@
     defaultLotteryCfg: defaultLotteryCfg,
     defaultPetNestCfg: defaultPetNestCfg,
     defaultBoxCfg: defaultBoxCfg,
+    defaultRankCfg: defaultRankCfg,
+    ACT_RANK_TYPES: ACT_RANK_TYPES,
+    ACT_RANK_VENDORS: ACT_RANK_VENDORS,
+    ACT_RANK_GAMES: ACT_RANK_GAMES,
     BOX_OPEN_ACTS: BOX_OPEN_ACTS,
     demoLotteryCfg: demoLotteryCfg,
     lotteryRankLabel: lotteryRankLabel,

@@ -988,11 +988,19 @@ body > .submodal {
 .act-card.act-type-box { margin: 0; border: 0; padding: 0; min-height: 200px; }
 .act-card.act-type-box.has-type { min-height: 0; padding: 8px 0 0; }
 .act-cfg-form .form-item { align-items: center; }
-.act-cfg-form .form-item label {
+.act-cfg-form .form-item > label {
   width: 220px;
   white-space: normal;
   line-height: 1.4;
   padding-top: 0;
+}
+.act-rank-form .radio-line { flex-wrap: wrap; height: auto; min-height: 32px; }
+.act-rank-form .radio-line label {
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  text-align: left;
+  padding: 0;
 }
 .act-cfg-form .act-cfg-step input { width: 88px; }
 .act-q {
@@ -1117,6 +1125,30 @@ body > .submodal {
 .act-tt-lead { color: #4e5969; font-size: 13px; }
 .act-tt-sec { font-size: 14px; font-weight: 500; margin: 16px 0 6px 8px; color: #1d2129; }
 .act-tt-note { color: #f53f3f; font-size: 12px; margin: 0 0 12px 8px; }
+.act-rank-targets {
+  display: flex; flex-wrap: wrap; gap: 8px 14px; max-height: 180px; overflow: auto;
+  padding: 8px; border: 1px solid #e5e6eb; border-radius: 4px; margin-top: 8px;
+}
+.act-rank-form .form-item .act-rank-targets label.act-day {
+  width: auto;
+  flex: 1 1 46%;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  white-space: normal;
+  text-align: left;
+  padding: 0;
+  line-height: 1.35;
+}
+.act-rank-form .form-item .act-rank-targets input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin-top: 2px;
+  padding: 0;
+}
+.act-rank-form #aRankSearch { margin-bottom: 0; }
+.act-rank-table input { width: 120px; height: 32px; padding: 0 8px; }
 .act-tt-task { align-items: flex-start !important; }
 .act-tt-line {
   display: flex;

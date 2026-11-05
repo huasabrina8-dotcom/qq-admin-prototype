@@ -1963,6 +1963,229 @@
     return '';
   }
 
+  function rankScopeOpts(scope) {
+    if (scope === 'vendor') return S.ACT_RANK_VENDORS || [];
+    if (scope === 'game') return S.ACT_RANK_GAMES || [];
+    return S.ACT_RANK_TYPES || [];
+  }
+
+  function rankTargetHtml(scope, selected) {
+    selected = selected || [];
+    var opts = rankScopeOpts(scope);
+    var search = scope === 'game'
+      ? '<input id="aRankSearch" type="text" placeholder="搜索子游戏名称">'
+      : '';
+    var boxes = opts.map(function (g) {
+      var extra = g.vendor ? ' · ' + g.vendor : '';
+      var on = selected.indexOf(g.id) >= 0;
+      return '<label class="act-day" data-rank-label="' + U.escapeHtml((g.name + extra).toLowerCase()) + '">' +
+        '<input type="checkbox" data-rank-id="' + U.escapeHtml(g.id) + '"' + (on ? ' checked' : '') + '> ' +
+        U.escapeHtml(g.name + extra) + '</label>';
+    }).join('');
+    var hint = scope === 'vendor'
+      ? '勾选的每个游戏厂商各一张榜。'
+      : (scope === 'game' ? '勾选的每个子游戏各一张榜。' : '勾选的每个游戏类型各一张榜。');
+    return search + '<div class="act-rank-targets">' + boxes + '</div><div class="extra">' + hint +
+      '多张榜共用下面的名次奖金，分开排名、分开到账。</div>';
+  }
+
+  function rankPrizeRows(prizes) {
+    return (prizes || []).map(function (p) {
+      return '<tr><td><input data-rank-from type="text" value="' + U.escapeHtml(String(p.from)) + '"></td>' +
+        '<td><input data-rank-to type="text" value="' + U.escapeHtml(String(p.to)) + '"></td>' +
+        '<td><input data-rank-amt type="text" value="' + U.escapeHtml(String(p.amount)) + '"></td>' +
+        '<td><button type="button" class="op-link danger" data-rank-del>删除</button></td></tr>';
+    }).join('');
+  }
+
+  function rankBodyHtml(cfg) {
+    cfg = cfg || {};
+    var scope = cfg.scope || 'type';
+    function radio(val, label) {
+      return '<label><input type="radio" name="aRankScope" value="' + val + '"' + (scope === val ? ' checked' : '') + '> ' + label + '</label>';
+    }
+    var cycle = cfg.cycle || 'weekly';
+    function cycleRadio(val, label) {
+      return '<label><input type="radio" name="aRankCycle" value="' + val + '"' + (cycle === val ? ' checked' : '') + '> ' + label + '</label>';
+    }
+    var claim = cfg.claim_mode === 'auto' ? 'auto' : 'manual';
+    return '<div class="arco-form act-cfg-form act-rank-form">' +
+      '<div class="form-item"><label class="req">榜单维度 ' + actQ('一张活动只选一种维度。游戏类型、游戏厂商、单独子游戏分开建活动。') +
+      '</label><div class="ctrl"><div class="radio-line">' +
+      radio('type', '游戏类型') + radio('vendor', '游戏厂商') + radio('game', '单独子游戏') +
+      '</div></div></div>' +
+      '<div class="form-item"><label class="req">统计范围</label><div class="ctrl" id="aRankTargets">' +
+      rankTargetHtml(scope, cfg.targets || []) + '</div></div>' +
+      '<div class="form-item"><label>统计指标 ' + actQ('只按有效投注额从高到低排名。打码量不参与分奖。') +
+      '</label><div class="ctrl"><input type="text" value="有效投注额" disabled></div></div>' +
+      '<div class="form-item"><label>奖励方式 ' + actQ('每个名次发放固定金额。不按玩家打码量占奖池的比例分配。') +
+      '</label><div class="ctrl"><input type="text" value="固定名次奖金" disabled>' +
+      '<div class="extra">跟 Playtime 一样：名次对应固定金额。打码量只决定名次，不按入池比例分钱。</div></div></div>' +
+      '<div class="form-item"><label class="req">上榜最低有效投注 ' + actQ('本周期有效投注达到该金额才进入榜单。0 表示不设门槛。') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'min_bet', min: 0, max: 9999999, ph: '请输入上榜最低有效投注' }, cfg.min_bet == null ? 100 : cfg.min_bet) +
+      '</div></div>' +
+      '<div class="form-item"><label class="req">统计周期 ' + actQ('每日：自然日 00:00 至 23:59（GMT+8），次日 00:10 结算。每周：周一 00:00 至周日 23:59，下周一 00:10 结算。活动期内：整个活动时间只结算一次。') +
+      '</label><div class="ctrl"><div class="radio-line">' +
+      cycleRadio('daily', '每日') + cycleRadio('weekly', '每周') + cycleRadio('period', '活动期内') +
+      '</div><div class="extra">活动时间内按所选周期切轮次。榜单每 10 分钟刷新。投注额相同，先达到的排前。</div></div></div>' +
+      '<div class="form-item"><label class="req">活动开始</label><div class="ctrl">' +
+      '<input data-cfg="rank_start" type="text" placeholder="YYYY-MM-DD HH:mm:ss" value="' + U.escapeHtml(cfg.startAt || '') + '"></div></div>' +
+      '<div class="form-item"><label class="req">活动结束</label><div class="ctrl">' +
+      '<input data-cfg="rank_end" type="text" placeholder="YYYY-MM-DD HH:mm:ss" value="' + U.escapeHtml(cfg.endAt || '') + '"></div></div>' +
+      '<div class="form-item"><label class="req">奖励类型</label><div class="ctrl"><select data-cfg="reward_type">' +
+      ['真金', '彩金'].map(function (t) {
+        return '<option value="' + t + '"' + ((cfg.reward_type || '真金') === t ? ' selected' : '') + '>' + t + '</option>';
+      }).join('') + '</select></div></div>' +
+      '<div class="form-item"><label class="req">打码量倍数 ' + actQ('奖励领取后的打码倍数。设置为 0 时不限流水。') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'wager', min: 0, max: 999, ph: '请输入打码量倍数' }, cfg.wager === '' || cfg.wager == null ? '' : cfg.wager) +
+      '</div></div>' +
+      '<div class="form-item"><label class="req">领取方式 ' + actQ('自动派发在结算后直接到账。手动领取需要用户在前台榜单页领取，结算后 72 小时内有效。') +
+      '</label><div class="ctrl"><div class="radio-line">' +
+      '<label><input type="radio" name="aRankClaim" value="auto"' + (claim === 'auto' ? ' checked' : '') + '> 自动派发</label>' +
+      '<label><input type="radio" name="aRankClaim" value="manual"' + (claim === 'manual' ? ' checked' : '') + '> 手动领取</label>' +
+      '</div></div></div>' +
+      '<div class="act-sec">名次固定奖金</div>' +
+      '<p class="act-tt-note">* 奖金是该名次的固定金额，不是奖池分成。名次从 1 开始，下一行起点必须等于上一行终点 + 1。最后一行的终点就是前台展示到第几名。</p>' +
+      '<table class="act-vip-table act-rank-table"><thead><tr><th>名次起</th><th>名次止</th><th>固定奖金</th><th></th></tr></thead>' +
+      '<tbody id="aRankPrizeBody">' + rankPrizeRows(cfg.prizes || []) + '</tbody></table>' +
+      '<button class="btn btn-black" type="button" id="aRankPrizeAdd" style="margin:8px 0 12px">+ 新增名次</button>' +
+      '<div class="form-item"><label class="req">活动说明</label><div class="ctrl">' +
+      '<textarea id="aRankDesc" maxlength="500" placeholder="展示在前台规则区">' + U.escapeHtml(cfg.desc || '') + '</textarea>' +
+      '<div class="extra">前台规则区展示这段说明。</div></div></div>' +
+      '</div>';
+  }
+
+  function bindRankCfg(box) {
+    if (!box || !box.querySelector('.act-rank-form')) return;
+    function selectedIds() {
+      return $$ (box, '[data-rank-id]:checked').map(function (c) { return c.getAttribute('data-rank-id'); });
+    }
+    function paintTargets(scope, selected) {
+      var wrap = box.querySelector('#aRankTargets');
+      if (!wrap) return;
+      wrap.innerHTML = rankTargetHtml(scope, selected || []);
+      var search = box.querySelector('#aRankSearch');
+      if (search) {
+        search.oninput = function () {
+          var q = search.value.trim().toLowerCase();
+          $$ (wrap, '[data-rank-label]').forEach(function (lab) {
+            lab.hidden = !!(q && lab.getAttribute('data-rank-label').indexOf(q) < 0);
+          });
+        };
+      }
+    }
+    $$ (box, 'input[name="aRankScope"]').forEach(function (r) {
+      r.onchange = function () {
+        if (!r.checked) return;
+        paintTargets(r.value, []);
+      };
+    });
+    var search0 = box.querySelector('#aRankSearch');
+    if (search0) {
+      search0.oninput = function () {
+        var q = search0.value.trim().toLowerCase();
+        $$ (box, '[data-rank-label]').forEach(function (lab) {
+          lab.hidden = !!(q && lab.getAttribute('data-rank-label').indexOf(q) < 0);
+        });
+      };
+    }
+    var add = box.querySelector('#aRankPrizeAdd');
+    if (add) {
+      add.onclick = function () {
+        var body = box.querySelector('#aRankPrizeBody');
+        var rows = $$ (body, 'tr');
+        var next = 1;
+        if (rows.length) {
+          var lastTo = rows[rows.length - 1].querySelector('[data-rank-to]');
+          var n = Number(lastTo && lastTo.value);
+          if (!isNaN(n) && n >= 1) next = n + 1;
+        }
+        body.insertAdjacentHTML('beforeend', rankPrizeRows([{ from: next, to: next, amount: '' }]));
+      };
+    }
+    if (!box._rankDelBound) {
+      box._rankDelBound = true;
+      box.addEventListener('click', function (e) {
+        var del = e.target.closest('[data-rank-del]');
+        if (!del || !box.contains(del)) return;
+        var tr = del.closest('tr');
+        var body = box.querySelector('#aRankPrizeBody');
+        if (body && body.querySelectorAll('tr').length <= 1) {
+          U.toast('至少保留一条名次奖金', 'err');
+          return;
+        }
+        if (tr) tr.remove();
+      });
+    }
+  }
+
+  function readRankCfg() {
+    var cfg = S.defaultRankCfg ? S.defaultRankCfg() : {};
+    var h5 = document.getElementById('aH5');
+    var pc = document.getElementById('aPC');
+    cfg.mobileIcon = !!(h5 && h5.classList.contains('done'));
+    cfg.pcIcon = !!(pc && pc.classList.contains('done'));
+    var scope = document.querySelector('input[name="aRankScope"]:checked');
+    cfg.scope = scope ? scope.value : 'type';
+    cfg.targets = $$ (document, '[data-rank-id]:checked').map(function (c) { return c.getAttribute('data-rank-id'); });
+    var minEl = document.querySelector('[data-cfg="min_bet"]');
+    cfg.min_bet = minEl ? minEl.value.trim() : '';
+    var cycle = document.querySelector('input[name="aRankCycle"]:checked');
+    cfg.cycle = cycle ? cycle.value : 'weekly';
+    var startEl = document.querySelector('[data-cfg="rank_start"]');
+    var endEl = document.querySelector('[data-cfg="rank_end"]');
+    cfg.startAt = startEl ? startEl.value.trim() : '';
+    cfg.endAt = endEl ? endEl.value.trim() : '';
+    var typeEl = document.querySelector('[data-cfg="reward_type"]');
+    cfg.reward_type = typeEl ? typeEl.value : '真金';
+    var wagerEl = document.querySelector('[data-cfg="wager"]');
+    cfg.wager = wagerEl ? wagerEl.value.trim() : '';
+    var claim = document.querySelector('input[name="aRankClaim"]:checked');
+    cfg.claim_mode = claim ? claim.value : 'manual';
+    cfg.prizes = $$ (document, '#aRankPrizeBody tr').map(function (tr) {
+      return {
+        from: (tr.querySelector('[data-rank-from]') || {}).value || '',
+        to: (tr.querySelector('[data-rank-to]') || {}).value || '',
+        amount: ((tr.querySelector('[data-rank-amt]') || {}).value || '').trim()
+      };
+    });
+    var desc = document.getElementById('aRankDesc');
+    cfg.desc = desc ? desc.value.trim() : '';
+    return cfg;
+  }
+
+  function validRankCfg(cfg) {
+    if (!cfg.mobileIcon) return '请上传移动端图标';
+    if (!cfg.pcIcon) return '请上传PC端图标';
+    if (cfg.scope !== 'type' && cfg.scope !== 'vendor' && cfg.scope !== 'game') return '请选择榜单维度';
+    if (!cfg.targets || !cfg.targets.length) return '请选择统计范围';
+    if (cfg.min_bet === '' || isNaN(Number(cfg.min_bet)) || Number(cfg.min_bet) < 0) return '请输入上榜最低有效投注';
+    if (cfg.cycle !== 'daily' && cfg.cycle !== 'weekly' && cfg.cycle !== 'period') return '请选择统计周期';
+    var timeRe = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+    if (!timeRe.test(cfg.startAt || '')) return '请输入活动开始时间，格式 YYYY-MM-DD HH:mm:ss';
+    if (!timeRe.test(cfg.endAt || '')) return '请输入活动结束时间，格式 YYYY-MM-DD HH:mm:ss';
+    if (cfg.startAt >= cfg.endAt) return '活动开始时间必须早于结束时间';
+    if (cfg.reward_type !== '真金' && cfg.reward_type !== '彩金') return '请选择奖励类型';
+    if (cfg.wager === '' || isNaN(Number(cfg.wager)) || Number(cfg.wager) < 0) return '请输入打码量倍数';
+    if (cfg.claim_mode !== 'auto' && cfg.claim_mode !== 'manual') return '请选择领取方式';
+    if (!cfg.prizes || !cfg.prizes.length) return '请至少配置一条名次奖金';
+    for (var i = 0; i < cfg.prizes.length; i++) {
+      var row = cfg.prizes[i];
+      var n = i + 1;
+      if (!/^\d+$/.test(String(row.from).trim()) || !/^\d+$/.test(String(row.to).trim())) return '第 ' + n + ' 行名次须为整数';
+      var from = Number(row.from);
+      var to = Number(row.to);
+      if (from < 1 || to < 1) return '第 ' + n + ' 行名次须大于 0';
+      if (from > to) return '第 ' + n + ' 行名次起点不能大于终点';
+      if (i === 0 && from !== 1) return '名次必须从第 1 名开始';
+      if (i > 0 && from !== Number(cfg.prizes[i - 1].to) + 1) return '名次必须连续，不能重叠或留空';
+      if (!/^\d+(\.\d{1,2})?$/.test(String(row.amount).trim())) return '第 ' + n + ' 行固定奖金须为不少于 0 的金额，最多两位小数';
+      if (Number(row.amount) > 9999999) return '第 ' + n + ' 行固定奖金不能大于 9999999';
+    }
+    if (!cfg.desc) return '请输入活动说明';
+    return '';
+  }
+
   function actTypeFieldsHtml(type, row) {
     if (type === 'box') {
       var bcfg = (row && row.cfg && row.cfg.chests) ? row.cfg : (S.defaultBoxCfg ? S.defaultBoxCfg() : {});
@@ -1990,6 +2213,10 @@
       return lotteryBodyHtml(lcfg);
     }
     if (type === 'petNest') return '';
+    if (type === 'rank') {
+      var kcfg = (row && row.cfg && row.cfg.scope) ? row.cfg : (S.defaultRankCfg ? S.defaultRankCfg() : {});
+      return rankBodyHtml(kcfg);
+    }
     var fields = (S.ACT_TYPE_FIELDS || {})[type] || [];
     if (!fields.length) return '<div class="act-type-empty">请选择活动类型</div>';
     var tip = '';
@@ -2056,6 +2283,7 @@
     bindTurntableCfg(box);
     bindLotteryCfg(box);
     bindBoxCfg(box);
+    bindRankCfg(box);
   }
 
   function bindLotteryCfg(box) {
@@ -2663,6 +2891,7 @@
     if (type === 'turntable') return readTurntableCfg();
     if (type === 'lottery') return readLotteryCfg();
     if (type === 'petNest') return S.defaultPetNestCfg ? S.defaultPetNestCfg() : {};
+    if (type === 'rank') return readRankCfg();
     var fields = (S.ACT_TYPE_FIELDS || {})[type] || [];
     var cfg = S.defaultActCfg ? S.defaultActCfg(type) : {};
     fields.forEach(function (f) {
@@ -2770,6 +2999,7 @@
       return '';
     }
     if (type === 'petNest') return '';
+    if (type === 'rank') return validRankCfg(cfg);
     var fields = (S.ACT_TYPE_FIELDS || {})[type] || [];
     for (var i = 0; i < fields.length; i++) {
       var f = fields[i];
@@ -2853,13 +3083,14 @@
               return;
             }
             if (head) {
-              if (type === 'weekLoss' || type === 'dayLoss' || type === 'rain' || type === 'turntable' || type === 'lottery' || type === 'box') {
+              if (type === 'weekLoss' || type === 'dayLoss' || type === 'rain' || type === 'turntable' || type === 'lottery' || type === 'box' || type === 'rank') {
                 var headCfg = (src && src.cfg) ? src.cfg : (
                   type === 'dayLoss' ? (S.defaultDayLossCfg ? S.defaultDayLossCfg() : {}) :
                   type === 'rain' ? (S.defaultRainCfg ? S.defaultRainCfg() : {}) :
                   type === 'turntable' ? (S.defaultTurntableCfg ? S.defaultTurntableCfg() : {}) :
                   type === 'lottery' ? (S.defaultLotteryCfg ? S.defaultLotteryCfg() : {}) :
                   type === 'box' ? (S.defaultBoxCfg ? S.defaultBoxCfg() : {}) :
+                  type === 'rank' ? (S.defaultRankCfg ? S.defaultRankCfg() : {}) :
                   (S.defaultWeekLossCfg ? S.defaultWeekLossCfg() : {})
                 );
                 head.innerHTML = type === 'box' ? boxHeadHtml(headCfg) : weekLossHeadHtml(headCfg);
@@ -2915,8 +3146,8 @@
                 tag: tag,
                 cfg: cfg,
                 sort: row && row.sort != null ? row.sort : 1000,
-                startAt: (type === 'lottery' && cfg.startAt) ? cfg.startAt : ((row && row.startAt) || ''),
-                endAt: (row && row.endAt) || ''
+                startAt: ((type === 'lottery' || type === 'rank') && cfg.startAt) ? cfg.startAt : ((row && row.startAt) || ''),
+                endAt: (type === 'rank' && cfg.endAt) ? cfg.endAt : ((row && row.endAt) || '')
               };
               if (type === 'petNest') payload.floatOn = null;
               if (row) {
