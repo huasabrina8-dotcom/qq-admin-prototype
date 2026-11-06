@@ -1989,10 +1989,58 @@
       '多张榜共用下面的名次奖金，分开排名、分开到账。</div>';
   }
 
+  function rankBotList(text) {
+    var raw = String(text || '').trim().replace(/，/g, ',').replace(/\s+/g, '');
+    if (!raw) return { ok: true, ranks: [] };
+    var tokens = /^[1-9]{3,}$/.test(raw) ? raw.split('') : raw.split(',');
+    var ranks = [];
+    for (var i = 0; i < tokens.length; i++) {
+      var part = tokens[i];
+      if (!part) return { ok: false, ranks: [] };
+      var range = part.match(/^(\d+)-(\d+)$/);
+      if (range) {
+        var from = Number(range[1]);
+        var to = Number(range[2]);
+        if (from < 1 || to < from || to - from > 99) return { ok: false, ranks: [] };
+        for (var n = from; n <= to; n++) ranks.push(n);
+      } else if (/^\d+$/.test(part) && Number(part) >= 1) {
+        ranks.push(Number(part));
+      } else return { ok: false, ranks: [] };
+    }
+    var seen = {};
+    for (var j = 0; j < ranks.length; j++) {
+      if (seen[ranks[j]]) return { ok: false, ranks: [] };
+      seen[ranks[j]] = 1;
+    }
+    ranks.sort(function (a, b) { return a - b; });
+    return { ok: true, ranks: ranks };
+  }
+
+  function rankBotText(ranks) {
+    return (ranks || []).join(',');
+  }
+
+  function rankBotHintText(parsed, raw) {
+    if (!String(raw || '').trim()) return '留空时，第 1 名起都是真实玩家，按自己的名次领取固定奖金。';
+    if (!parsed.ok) return '格式示例：1,2,3 、123 或 1-3。大于 9 的名次请用逗号，例如 1,2,10。';
+    if (!parsed.ranks.length) return '留空时，第 1 名起都是真实玩家，按自己的名次领取固定奖金。';
+    var next = 1;
+    while (parsed.ranks.indexOf(next) >= 0) next += 1;
+    return '第 ' + parsed.ranks.join('、') + ' 名由机器人占位，前台显示成普通账号，真实玩家不能领取。真实玩家按有效投注从高到低排在其余名次，第一个可领取名次是第 ' + next + ' 名。';
+  }
+
+  function rankWinnerText(from, to) {
+    from = Number(from);
+    to = Number(to);
+    if (!(from >= 1) || !(to >= from)) return '–';
+    return String(to - from + 1);
+  }
+
   function rankPrizeRows(prizes) {
     return (prizes || []).map(function (p) {
       return '<tr><td><input data-rank-from type="text" value="' + U.escapeHtml(String(p.from)) + '"></td>' +
         '<td><input data-rank-to type="text" value="' + U.escapeHtml(String(p.to)) + '"></td>' +
+        '<td data-rank-win>' + rankWinnerText(p.from, p.to) + '</td>' +
         '<td><input data-rank-amt type="text" value="' + U.escapeHtml(String(p.amount)) + '"></td>' +
         '<td><button type="button" class="op-link danger" data-rank-del>删除</button></td></tr>';
     }).join('');
@@ -2004,11 +2052,10 @@
     function radio(val, label) {
       return '<label><input type="radio" name="aRankScope" value="' + val + '"' + (scope === val ? ' checked' : '') + '> ' + label + '</label>';
     }
-    var cycle = cfg.cycle || 'weekly';
+    var cycle = cfg.cycle || 'daily';
     function cycleRadio(val, label) {
       return '<label><input type="radio" name="aRankCycle" value="' + val + '"' + (cycle === val ? ' checked' : '') + '> ' + label + '</label>';
     }
-    var claim = cfg.claim_mode === 'auto' ? 'auto' : 'manual';
     return '<div class="arco-form act-cfg-form act-rank-form">' +
       '<div class="form-item"><label class="req">榜单维度 ' + actQ('一张活动只选一种维度。游戏类型、游戏厂商、单独子游戏分开建活动。') +
       '</label><div class="ctrl"><div class="radio-line">' +
@@ -2024,31 +2071,33 @@
       '<div class="form-item"><label class="req">上榜最低有效投注 ' + actQ('本周期有效投注达到该金额才进入榜单。0 表示不设门槛。') +
       '</label><div class="ctrl">' + actStepHtml({ key: 'min_bet', min: 0, max: 9999999, ph: '请输入上榜最低有效投注' }, cfg.min_bet == null ? 100 : cfg.min_bet) +
       '</div></div>' +
-      '<div class="form-item"><label class="req">统计周期 ' + actQ('每日：自然日 00:00 至 23:59（GMT+8），次日 00:10 结算。每周：周一 00:00 至周日 23:59，下周一 00:10 结算。活动期内：整个活动时间只结算一次。') +
+      '<div class="form-item"><label class="req">统计周期 ' + actQ('每日：自然日 00:00 至 23:59（GMT+8），次日结算。每周：周一 00:00 至周日 23:59，下周一结算。活动期内：整个活动时间只结算一次。结算后 72 小时内手动领取。') +
       '</label><div class="ctrl"><div class="radio-line">' +
       cycleRadio('daily', '每日') + cycleRadio('weekly', '每周') + cycleRadio('period', '活动期内') +
-      '</div><div class="extra">活动时间内按所选周期切轮次。榜单每 10 分钟刷新。投注额相同，先达到的排前。</div></div></div>' +
+      '</div><div class="extra">活动时间内按所选周期切轮次。前台标题显示第 1 名奖金，倒计时到本轮结束。榜单每 10 分钟刷新。投注额相同，先达到的排前。</div></div></div>' +
       '<div class="form-item"><label class="req">活动开始</label><div class="ctrl">' +
       '<input data-cfg="rank_start" type="text" placeholder="YYYY-MM-DD HH:mm:ss" value="' + U.escapeHtml(cfg.startAt || '') + '"></div></div>' +
       '<div class="form-item"><label class="req">活动结束</label><div class="ctrl">' +
       '<input data-cfg="rank_end" type="text" placeholder="YYYY-MM-DD HH:mm:ss" value="' + U.escapeHtml(cfg.endAt || '') + '"></div></div>' +
-      '<div class="form-item"><label class="req">奖励类型</label><div class="ctrl"><select data-cfg="reward_type">' +
-      ['真金', '彩金'].map(function (t) {
-        return '<option value="' + t + '"' + ((cfg.reward_type || '真金') === t ? ' selected' : '') + '>' + t + '</option>';
-      }).join('') + '</select></div></div>' +
-      '<div class="form-item"><label class="req">打码量倍数 ' + actQ('奖励领取后的打码倍数。设置为 0 时不限流水。') +
+      '<div class="form-item"><label class="req">奖励类型 ' + actQ('365 只发真金，奖励进入真金钱包。') +
+      '</label><div class="ctrl"><input type="text" value="真金" disabled></div></div>' +
+      '<div class="form-item"><label class="req">打码量倍数 ' + actQ('奖金到账后、提现前需要完成的打码倍数。设置为 0 时不限流水。') +
       '</label><div class="ctrl">' + actStepHtml({ key: 'wager', min: 0, max: 999, ph: '请输入打码量倍数' }, cfg.wager === '' || cfg.wager == null ? '' : cfg.wager) +
       '</div></div>' +
-      '<div class="form-item"><label class="req">领取方式 ' + actQ('自动派发在结算后直接到账。手动领取需要用户在前台榜单页领取，结算后 72 小时内有效。') +
-      '</label><div class="ctrl"><div class="radio-line">' +
-      '<label><input type="radio" name="aRankClaim" value="auto"' + (claim === 'auto' ? ' checked' : '') + '> 自动派发</label>' +
-      '<label><input type="radio" name="aRankClaim" value="manual"' + (claim === 'manual' ? ' checked' : '') + '> 手动领取</label>' +
-      '</div></div></div>' +
+      '<div class="form-item"><label class="req">奖金有效天数 ' + actQ('从到账当天起算。有效期内没有完成打码，奖金不能提现。') +
+      '</label><div class="ctrl">' + actStepHtml({ key: 'bonus_days', min: 1, max: 365, ph: '30' }, cfg.bonus_days == null ? 30 : cfg.bonus_days) +
+      '</div></div>' +
+      '<div class="form-item"><label class="req">领取方式 ' + actQ('结算后 72 小时内，玩家在前台榜单页领取自己名次的固定奖金。机器人占位名次不能领取。') +
+      '</label><div class="ctrl"><input type="text" value="手动领取" disabled>' +
+      '<div class="extra">结算后 72 小时内领取，逾期失效。</div></div></div>' +
       '<div class="act-sec">名次固定奖金</div>' +
-      '<p class="act-tt-note">* 奖金是该名次的固定金额，不是奖池分成。名次从 1 开始，下一行起点必须等于上一行终点 + 1。最后一行的终点就是前台展示到第几名。</p>' +
-      '<table class="act-vip-table act-rank-table"><thead><tr><th>名次起</th><th>名次止</th><th>固定奖金</th><th></th></tr></thead>' +
+      '<p class="act-tt-note">* 奖金是该名次的固定金额，不是奖池分成。名次从 1 开始，下一行起点必须等于上一行终点 + 1。获奖人数 = 名次止 − 名次起 + 1，同一档金额相同。最后一行的终点就是前台发奖到第几名。</p>' +
+      '<table class="act-vip-table act-rank-table"><thead><tr><th>名次起</th><th>名次止</th><th>获奖人数</th><th>固定奖金</th><th></th></tr></thead>' +
       '<tbody id="aRankPrizeBody">' + rankPrizeRows(cfg.prizes || []) + '</tbody></table>' +
       '<button class="btn btn-black" type="button" id="aRankPrizeAdd" style="margin:8px 0 12px">+ 新增名次</button>' +
+      '<div class="form-item"><label>机器人占位名次 ' + actQ('这些名次固定给机器人，真实玩家不能领。填 1,2,3 时，成绩最好的真实玩家显示为第 4 名，领取第 4 名的固定奖金。') +
+      '</label><div class="ctrl"><input id="aRankBots" type="text" placeholder="1,2,3" value="' + U.escapeHtml(rankBotText(cfg.bot_ranks)) + '">' +
+      '<div class="extra" id="aRankBotHint">' + U.escapeHtml(rankBotHintText(rankBotList(rankBotText(cfg.bot_ranks)), rankBotText(cfg.bot_ranks))) + '</div></div></div>' +
       '<div class="form-item"><label class="req">活动说明</label><div class="ctrl">' +
       '<textarea id="aRankDesc" maxlength="500" placeholder="展示在前台规则区">' + U.escapeHtml(cfg.desc || '') + '</textarea>' +
       '<div class="extra">前台规则区展示这段说明。</div></div></div>' +
@@ -2103,6 +2152,13 @@
         body.insertAdjacentHTML('beforeend', rankPrizeRows([{ from: next, to: next, amount: '' }]));
       };
     }
+    var bots = box.querySelector('#aRankBots');
+    if (bots) {
+      bots.oninput = function () {
+        var hint = box.querySelector('#aRankBotHint');
+        if (hint) hint.textContent = rankBotHintText(rankBotList(bots.value), bots.value);
+      };
+    }
     if (!box._rankDelBound) {
       box._rankDelBound = true;
       box.addEventListener('click', function (e) {
@@ -2115,6 +2171,15 @@
           return;
         }
         if (tr) tr.remove();
+      });
+      box.addEventListener('input', function (e) {
+        if (!e.target.matches('[data-rank-from], [data-rank-to]')) return;
+        var tr = e.target.closest('tr');
+        var cell = tr && tr.querySelector('[data-rank-win]');
+        if (!cell) return;
+        var from = tr.querySelector('[data-rank-from]');
+        var to = tr.querySelector('[data-rank-to]');
+        cell.textContent = rankWinnerText(from && from.value, to && to.value);
       });
     }
   }
@@ -2136,12 +2201,12 @@
     var endEl = document.querySelector('[data-cfg="rank_end"]');
     cfg.startAt = startEl ? startEl.value.trim() : '';
     cfg.endAt = endEl ? endEl.value.trim() : '';
-    var typeEl = document.querySelector('[data-cfg="reward_type"]');
-    cfg.reward_type = typeEl ? typeEl.value : '真金';
+    cfg.reward_type = '真金';
     var wagerEl = document.querySelector('[data-cfg="wager"]');
     cfg.wager = wagerEl ? wagerEl.value.trim() : '';
-    var claim = document.querySelector('input[name="aRankClaim"]:checked');
-    cfg.claim_mode = claim ? claim.value : 'manual';
+    var daysEl = document.querySelector('[data-cfg="bonus_days"]');
+    cfg.bonus_days = daysEl ? daysEl.value.trim() : '';
+    cfg.claim_mode = 'manual';
     cfg.prizes = $$ (document, '#aRankPrizeBody tr').map(function (tr) {
       return {
         from: (tr.querySelector('[data-rank-from]') || {}).value || '',
@@ -2149,6 +2214,8 @@
         amount: ((tr.querySelector('[data-rank-amt]') || {}).value || '').trim()
       };
     });
+    var botsEl = document.getElementById('aRankBots');
+    cfg.bot_ranks = rankBotList(botsEl ? botsEl.value : '').ranks;
     var desc = document.getElementById('aRankDesc');
     cfg.desc = desc ? desc.value.trim() : '';
     return cfg;
@@ -2165,9 +2232,10 @@
     if (!timeRe.test(cfg.startAt || '')) return '请输入活动开始时间，格式 YYYY-MM-DD HH:mm:ss';
     if (!timeRe.test(cfg.endAt || '')) return '请输入活动结束时间，格式 YYYY-MM-DD HH:mm:ss';
     if (cfg.startAt >= cfg.endAt) return '活动开始时间必须早于结束时间';
-    if (cfg.reward_type !== '真金' && cfg.reward_type !== '彩金') return '请选择奖励类型';
+    cfg.reward_type = '真金';
     if (cfg.wager === '' || isNaN(Number(cfg.wager)) || Number(cfg.wager) < 0) return '请输入打码量倍数';
-    if (cfg.claim_mode !== 'auto' && cfg.claim_mode !== 'manual') return '请选择领取方式';
+    if (!/^\d+$/.test(String(cfg.bonus_days).trim()) || Number(cfg.bonus_days) < 1 || Number(cfg.bonus_days) > 365) return '奖金有效天数须为 1 到 365 的整数';
+    cfg.claim_mode = 'manual';
     if (!cfg.prizes || !cfg.prizes.length) return '请至少配置一条名次奖金';
     for (var i = 0; i < cfg.prizes.length; i++) {
       var row = cfg.prizes[i];
@@ -2182,6 +2250,14 @@
       if (!/^\d+(\.\d{1,2})?$/.test(String(row.amount).trim())) return '第 ' + n + ' 行固定奖金须为不少于 0 的金额，最多两位小数';
       if (Number(row.amount) > 9999999) return '第 ' + n + ' 行固定奖金不能大于 9999999';
     }
+    var botRaw = document.getElementById('aRankBots');
+    var bots = rankBotList(botRaw ? botRaw.value : '');
+    if (!bots.ok) return '机器人占位名次格式不正确，示例 1,2,3';
+    var lastTo = Number(cfg.prizes[cfg.prizes.length - 1].to);
+    for (var b = 0; b < bots.ranks.length; b++) {
+      if (bots.ranks[b] > lastTo) return '机器人名次不能超过榜单最后一名';
+    }
+    cfg.bot_ranks = bots.ranks;
     if (!cfg.desc) return '请输入活动说明';
     return '';
   }

@@ -676,16 +676,21 @@
       scope: 'type',
       targets: [],
       min_bet: 100,
-      cycle: 'weekly',
+      cycle: 'daily',
       startAt: '',
       endAt: '',
       reward_type: '真金',
       wager: 1,
+      bonus_days: 30,
       claim_mode: 'manual',
       prizes: defaultRankPrizes(),
+      bot_ranks: [],
       desc: ''
     };
   }
+
+  var RANK_DEMO_DESC = '有效投注只统计本榜勾选范围。投注额只决定名次，每个名次发放固定奖金，不按投注额占奖池比例分配。达到上榜最低有效投注才有资格。榜单每 10 分钟刷新。投注额相同，先达到的排前。轮次结算后 72 小时内手动领取，逾期失效。奖金 30 天内有效，提现前需完成对应打码倍数。';
+  var RANK_BOT_CLAIM_DESC = '第 1、2、3 名由机器人占位，前台显示成普通账号。真实玩家按有效投注排在其余名次，只能领取自己显示名次的固定奖金，不能领取机器人名次。进行中的一轮只展示预估奖金。轮次结束后 72 小时内手动领取。奖金 30 天内有效，提现前需完成对应打码倍数。';
 
   function demoRankCfg(kind) {
     var cfg = defaultRankCfg();
@@ -694,14 +699,15 @@
     cfg.min_bet = 100;
     cfg.reward_type = '真金';
     cfg.wager = 1;
+    cfg.bonus_days = 30;
     cfg.claim_mode = 'manual';
-    cfg.desc = '有效投注只统计本榜勾选范围。打码量只决定名次，每个名次发放固定奖金，不按打码量占奖池比例分配。榜单每 10 分钟刷新。投注额相同，先达到的排前。结算后 72 小时内手动领取，逾期失效。打码倍数为 0 时不限流水。';
+    cfg.desc = RANK_DEMO_DESC;
     if (kind === 'vendor') {
       cfg.scope = 'vendor';
       cfg.targets = ['JILI'];
       cfg.cycle = 'daily';
-      cfg.startAt = '2026-11-04 00:00:00';
-      cfg.endAt = '2026-11-04 23:59:59';
+      cfg.startAt = '2026-11-01 00:00:00';
+      cfg.endAt = '2026-11-30 23:59:59';
       cfg.prizes = [
         { from: 1, to: 1, amount: '3000.00' },
         { from: 2, to: 2, amount: '2000.00' },
@@ -729,6 +735,9 @@
     cfg.cycle = 'weekly';
     cfg.startAt = '2026-11-02 00:00:00';
     cfg.endAt = '2026-11-08 23:59:59';
+    cfg.bot_ranks = [1, 2, 3];
+    cfg.claim_mode = 'manual';
+    cfg.desc = RANK_BOT_CLAIM_DESC;
     return cfg;
   }
 
@@ -760,7 +769,7 @@
   function defaultActivities() {
     return [
       { id: '1500296', title: '电子与真人周榜', type: 'rank', tag: 'GO活动', sort: 1010, status: 1, floatOn: 1, startAt: '2026-11-02 00:00:00', endAt: '2026-11-08 23:59:59', createdAt: '2026-11-01 10:18:22', cfg: demoRankCfg('type') },
-      { id: '1500295', title: 'JILI 厂商日榜', type: 'rank', tag: 'New', sort: 1009, status: 1, floatOn: 0, startAt: '2026-11-04 00:00:00', endAt: '2026-11-04 23:59:59', createdAt: '2026-11-03 16:02:41', cfg: demoRankCfg('vendor') },
+      { id: '1500295', title: 'JILI 厂商日榜', type: 'rank', tag: 'New', sort: 1009, status: 1, floatOn: 0, startAt: '2026-11-01 00:00:00', endAt: '2026-11-30 23:59:59', createdAt: '2026-11-03 16:02:41', cfg: demoRankCfg('vendor') },
       { id: '1500294', title: 'Wild Bounty 子游戏榜', type: 'rank', tag: 'GO活动', sort: 1008, status: 1, floatOn: 1, startAt: '2026-11-01 00:00:00', endAt: '2026-11-30 23:59:59', createdAt: '2026-10-31 09:40:05', cfg: demoRankCfg('game') },
       { id: '1500288', title: '宠物窝', type: 'petNest', tag: '活动平台活动', sort: 1004, status: 1, floatOn: null, startAt: '2026-08-01 00:00:00', endAt: '', createdAt: '2026-08-12 09:18:00', cfg: defaultPetNestCfg() },
       { id: '1500275', title: '次日救援金', type: 'rescue', tag: '活动平台活动', sort: 1003, status: 0, floatOn: null, startAt: '2026-05-01 00:00:00', endAt: '', createdAt: '2026-04-28 10:12:08' },
@@ -1095,6 +1104,58 @@
               }
             });
             if (rankChanged) save(data);
+            var botChanged = false;
+            data.activities.forEach(function (a) {
+              if (!a || a.type !== 'rank') return;
+              if (!a.cfg) a.cfg = defaultRankCfg();
+              if (a.cfg.bot_ranks != null) return;
+              a.cfg.bot_ranks = a.id === '1500296' ? [1, 2, 3] : [];
+              botChanged = true;
+            });
+            if (botChanged) save(data);
+            var detailChanged = false;
+            data.activities.forEach(function (a) {
+              if (!a || a.type !== 'rank' || !a.cfg || a.cfg.detail_ver === 2) return;
+              a.cfg.claim_mode = 'manual';
+              a.cfg.bonus_days = 30;
+              a.cfg.desc = RANK_DEMO_DESC;
+              a.cfg.detail_ver = 2;
+              if (a.id === '1500295') {
+                a.cfg.cycle = 'daily';
+                a.cfg.startAt = '2026-11-01 00:00:00';
+                a.cfg.endAt = '2026-11-30 23:59:59';
+                a.startAt = a.cfg.startAt;
+                a.endAt = a.cfg.endAt;
+              }
+              detailChanged = true;
+            });
+            if (detailChanged) save(data);
+            var claimChanged = false;
+            data.activities.forEach(function (a) {
+              if (!a || a.id !== '1500296' || !a.cfg || a.cfg.detail_ver === 3) return;
+              a.cfg.claim_mode = 'manual';
+              a.cfg.bot_ranks = [1, 2, 3];
+              a.cfg.bonus_days = 30;
+              a.cfg.desc = RANK_BOT_CLAIM_DESC;
+              a.cfg.detail_ver = 3;
+              claimChanged = true;
+            });
+            if (claimChanged) save(data);
+            var manualOnly = false;
+            data.activities.forEach(function (a) {
+              if (!a || a.type !== 'rank' || !a.cfg || a.cfg.claim_mode === 'manual') return;
+              a.cfg.claim_mode = 'manual';
+              if (a.cfg.desc && a.cfg.desc.indexOf('自动到账') >= 0) a.cfg.desc = RANK_DEMO_DESC;
+              manualOnly = true;
+            });
+            if (manualOnly) save(data);
+            var cashOnly = false;
+            data.activities.forEach(function (a) {
+              if (!a || a.type !== 'rank' || !a.cfg || a.cfg.reward_type === '真金') return;
+              a.cfg.reward_type = '真金';
+              cashOnly = true;
+            });
+            if (cashOnly) save(data);
           }
           if (data.activities && !data.activities.some(function (a) { return a.type === 'petNest'; })) {
             var petRow = defaultActivities().filter(function (a) { return a.type === 'petNest'; })[0];
